@@ -48,6 +48,7 @@ import from grid.islands {
 }
 import from grid.prov { record_event }
 import from grid.campus { site_name, site_flood_stage, site_target_hours }
+import from grid.conditions { effective_flood_stage, conditions_line }
 
 glob MECHANISMS: list[str] = [
     "flood", "wind", "fuel_interdiction", "cyber_switching",
@@ -374,8 +375,8 @@ def plausible(mech: str, target: GridNode) -> tuple[bool, str] {
     if mech not in MECHANISMS {
         return (False, f"unknown mechanism '{mech}'");
     }
-    if mech == "flood" and target.elevation_m > site_flood_stage() {
-        return (False, f"{target.name} sits at {target.elevation_m:.1f} m, above the {site_flood_stage():.1f} m surge stage");
+    if mech == "flood" and target.elevation_m > effective_flood_stage() {
+        return (False, f"{target.name} sits at {target.elevation_m:.1f} m, above the {effective_flood_stage():.1f} m surge stage measured today");
     }
     if mech == "fuel_interdiction" and (not isinstance(target, Generator)) {
         return (False, f"{target.name} is not a generator; there is no fuel supply to interdict");

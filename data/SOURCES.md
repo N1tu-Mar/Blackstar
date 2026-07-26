@@ -134,3 +134,37 @@ Listed so nobody re-treads it: `portsmouth.tricare.mil`, `med.navy.mil`,
 Navy FMB MILCON budget books are CAPTCHA-gated; BSR FY24+ is CUI. There is no
 NMCP energy project in any DHA MILCON or ERCIP book FY2019–FY2027 except **FY2021
 ERCIP P-1803**, an air-handler retrofit at $611K.
+
+---
+
+## Live conditions (added)
+
+`scripts/fetch_conditions.py` freezes real observations to
+`data/live/<site>-conditions.json`. The app reads the file and never calls a
+network service — same rule as the satellite basemap.
+
+| Field | Value fetched 2026-07-26 | Source |
+|---|---|---|
+| Gauge | **Elizabeth River at the Midtown Tunnel** (NWS `EZMV2`, USGS `0204288831`), ~1.5 mi from the hospital | `api.water.noaa.gov/nwps/v1/gauges/EZMV2` |
+| Observed stage | **3.58 ft MLLW**, 22:36Z, `no_flooding` | same |
+| NWS forecast peak | **4.4 ft MLLW** | same |
+| Published thresholds | action 4.5 · minor 5 · moderate 6 · **major 7** ft MLLW | same |
+| Forecast | "Chance Showers And Thunderstorms", wind 2–6 mph | `api.weather.gov` |
+| Worst-credible surge stage | **8.02 ft MLLW = 2.44 m** | Sewells Point record crest, 1933-08-23 Chesapeake–Potomac hurricane. Isabel reached 7.89 ft in 2003. |
+
+This feeds `plausible()` in `grid/red.jac`: RED's flood mechanism is refused for
+any element above the surge stage, so the gate now compares against a measured
+datum instead of a constant.
+
+**It corrected a real bug.** `nmcp-portsmouth.json` carries
+`flood_stage_m = 4.0` — 13.1 ft, higher than any storm tide ever recorded on the
+Elizabeth River. Under that figure RED could flood equipment no hurricane on
+record could reach, which made the plausibility gate decorative. Measured now
+replaces assumed rather than being floored by it, and the stage dropped 4.0 m →
+2.44 m.
+
+**Units are a trap here.** NWPS reports ft MLLW. NOAA CO-OPS `floodlevels.json`
+reports *station datum*, and at Sewells Point (8638610) the two differ by
+4.38 ft — more than the whole minor-to-major range. An earlier version of this
+script mixed metric CO-OPS levels with invented headroom and produced a 13 ft
+surge stage. Everything is ft MLLW now, converted once.

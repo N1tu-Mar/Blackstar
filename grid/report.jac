@@ -43,7 +43,7 @@ import from grid.islands {
     all_elements, recompute_islands, survey, site_endurance, dark_facilities,
     UTILITY_HOURS
 }
-import from grid.campus { site_name, site_target_hours }
+import from grid.campus { site_name, site_target_hours, site_config }
 
 
 # --------------------------------------------------------------- report shape
@@ -75,6 +75,24 @@ obj ComplianceReport {
         load_total_kw: float = 0.0,
         load_curtailed_kw: float = 0.0,
         sections: list[ReportSection] = [];
+}
+
+
+"""Which reporting regimes this site is actually subject to.
+
+A ship repair yard owes 10 U.S.C. 2925 and does not owe the CMS emergency
+preparedness rule -- it is not a hospital. Citing 42 CFR 482.15 on a shipyard is
+the kind of error that costs credibility with the one reader who would notice, so
+the site file declares its own regimes and the filing only cites those.
+"""
+def mandates -> list {
+    return site_config().get("mandates", ["2925", "cms"]);
+}
+
+
+"""True when the CMS emergency preparedness rule applies to this site."""
+def cms_applies -> bool {
+    return "cms" in mandates();
 }
 
 
@@ -336,7 +354,8 @@ def section_curtailment(rep: ComplianceReport) -> ReportSection {
 def section_sequence -> ReportSection {
     sec = ReportSection(
         title="4. Sequence of events",
-        mandate="42 CFR 482.15(d) - record of the event and the response"
+        mandate=("42 CFR 482.15(d) - record of the event and the response"
+                 if cms_applies() else "10 U.S.C. 2925(a) - record of the event and the response")
     );
 
     events = all_events();
@@ -374,8 +393,10 @@ round that produced it.
 def section_exercise(run: Run) -> ReportSection {
     sec = ReportSection(
         title="5. Adversarial exercise record",
-        mandate="42 CFR 482.15(d)(2) - testing of the emergency preparedness plan; "
-                "10 U.S.C. 2925(a)(4) - vulnerabilities identified"
+        mandate=("42 CFR 482.15(d)(2) - testing of the emergency preparedness plan; "
+                 "10 U.S.C. 2925(a)(4) - vulnerabilities identified"
+                 if cms_applies() else
+                 "10 U.S.C. 2925(a)(4) - vulnerabilities identified")
     );
 
     rounds = run_rounds(run);
@@ -543,9 +564,12 @@ def render_markdown(rep: ComplianceReport) -> str {
     );
     out.append("");
     out.append(
-        "Statutory basis: 10 U.S.C. 2925(a) (energy resilience reporting) and "
-        "42 CFR 482.15 (CMS emergency preparedness). Bracketed identifiers refer "
-        "to nodes in the run archive and can be walked back to their cause."
+        ("Statutory basis: 10 U.S.C. 2925(a) (energy resilience reporting) and "
+         "42 CFR 482.15 (CMS emergency preparedness). "
+         if cms_applies() else
+         "Statutory basis: 10 U.S.C. 2925(a) (energy resilience reporting). ")
+        + "Bracketed identifiers refer to nodes in the run archive and can be "
+          "walked back to their cause."
     );
     out.append("");
 

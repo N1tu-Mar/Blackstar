@@ -2,6 +2,10 @@
   "id": "wrnmmc-bethesda",
   "name": "Walter Reed National Military Medical Center",
   "blurb": "Bethesda, Maryland. Inland, so the hazard is creek and stormwater flooding rather than storm surge.",
+  "mandates": [
+    "2925",
+    "cms"
+  ],
   "target_hours": 96.0,
   "flood_stage_m": 91.0,
   "view": {

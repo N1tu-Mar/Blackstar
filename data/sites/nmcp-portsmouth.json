@@ -2,6 +2,10 @@
   "id": "nmcp-portsmouth",
   "name": "Naval Medical Center Portsmouth",
   "blurb": "A hospital and a DoD installation. CMS emergency preparedness and 10 U.S.C. 2925 both apply to the same building.",
+  "mandates": [
+    "2925",
+    "cms"
+  ],
   "target_hours": 96.0,
   "flood_stage_m": 4.0,
   "view": {

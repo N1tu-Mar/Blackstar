@@ -1,0 +1,468 @@
+{
+  "id": "nnsy-portsmouth",
+  "name": "Norfolk Naval Shipyard",
+  "blurb": "A nuclear-capable ship repair yard, not a hospital. Tier 1 here is dry dock dewatering and radiological control, so the same simulator ranks a completely different mission. 10 U.S.C. 2925 applies; CMS does not.",
+  "mandates": [
+    "2925"
+  ],
+  "target_hours": 72.0,
+  "flood_stage_m": 2.44,
+  "view": {
+    "south": 36.805,
+    "north": 36.826,
+    "west": -76.304,
+    "east": -76.286,
+    "width_px": 1600.0,
+    "height_px": 900.0
+  },
+  "satellite": "data/sites/nnsy-portsmouth-satellite.jpg",
+  "elements": [
+    {
+      "name": "Portsmouth 115kV Switching Station",
+      "type": "Substation",
+      "kind": "substation",
+      "lat": 36.8232,
+      "lon": -76.3012,
+      "elevation_m": 6.1,
+      "kv": 115.0,
+      "utility_source": true
+    },
+    {
+      "name": "Gilmerton 34.5kV Substation",
+      "type": "Substation",
+      "kind": "substation",
+      "lat": 36.8076,
+      "lon": -76.2905,
+      "elevation_m": 4.8,
+      "kv": 34.5,
+      "utility_source": true
+    },
+    {
+      "name": "Yard Generator Plant 1",
+      "type": "Generator",
+      "kind": "generator",
+      "lat": 36.8176,
+      "lon": -76.2976,
+      "elevation_m": 3.4,
+      "kw_rating": 2500.0,
+      "fuel_gal": 12000.0
+    },
+    {
+      "name": "Yard Generator Plant 2",
+      "type": "Generator",
+      "kind": "generator",
+      "lat": 36.8142,
+      "lon": -76.2938,
+      "elevation_m": 3.1,
+      "kw_rating": 2500.0,
+      "fuel_gal": 12000.0
+    },
+    {
+      "name": "Dry Dock 8 Standby Generator",
+      "type": "Generator",
+      "kind": "generator",
+      "lat": 36.8118,
+      "lon": -76.2998,
+      "elevation_m": 2.2,
+      "kw_rating": 1600.0,
+      "fuel_gal": 9000.0
+    },
+    {
+      "name": "Radiological Control UPS",
+      "type": "Battery",
+      "kind": "battery",
+      "lat": 36.8162,
+      "lon": -76.2952,
+      "elevation_m": 4.0,
+      "kwh_stored": 2400.0,
+      "kwh_capacity": 2400.0,
+      "max_kw": 800.0
+    },
+    {
+      "name": "Waterfront Comms UPS",
+      "type": "Battery",
+      "kind": "battery",
+      "lat": 36.8102,
+      "lon": -76.2926,
+      "elevation_m": 3.6,
+      "kwh_stored": 900.0,
+      "kwh_capacity": 900.0,
+      "max_kw": 350.0
+    },
+    {
+      "name": "Yard Main Switchgear",
+      "type": "GridNode",
+      "kind": "switchgear",
+      "lat": 36.8198,
+      "lon": -76.2988,
+      "elevation_m": 5.2
+    },
+    {
+      "name": "North Yard Switchgear",
+      "type": "GridNode",
+      "kind": "switchgear",
+      "lat": 36.8206,
+      "lon": -76.293,
+      "elevation_m": 5.6
+    },
+    {
+      "name": "South Yard Switchgear",
+      "type": "GridNode",
+      "kind": "switchgear",
+      "lat": 36.8092,
+      "lon": -76.2954,
+      "elevation_m": 3.9
+    },
+    {
+      "name": "Waterfront Substation A",
+      "type": "GridNode",
+      "kind": "switchgear",
+      "lat": 36.8134,
+      "lon": -76.3002,
+      "elevation_m": 2.6
+    },
+    {
+      "name": "Waterfront Substation B",
+      "type": "GridNode",
+      "kind": "switchgear",
+      "lat": 36.8114,
+      "lon": -76.2914,
+      "elevation_m": 2.4
+    },
+    {
+      "name": "Dry Dock 8 Dewatering Pumps",
+      "type": "Facility",
+      "kind": "facility",
+      "lat": 36.8124,
+      "lon": -76.3012,
+      "elevation_m": 1.8,
+      "tier": 1,
+      "kw": 1450.0,
+      "category": "dry dock dewatering"
+    },
+    {
+      "name": "Dry Dock 3 Dewatering Pumps",
+      "type": "Facility",
+      "kind": "facility",
+      "lat": 36.8106,
+      "lon": -76.2984,
+      "elevation_m": 1.9,
+      "tier": 1,
+      "kw": 980.0,
+      "category": "dry dock dewatering"
+    },
+    {
+      "name": "Reactor Servicing Facility",
+      "type": "Facility",
+      "kind": "facility",
+      "lat": 36.8156,
+      "lon": -76.2946,
+      "elevation_m": 4.2,
+      "tier": 1,
+      "kw": 620.0,
+      "category": "radiological control"
+    },
+    {
+      "name": "Radiological Monitoring Center",
+      "type": "Facility",
+      "kind": "facility",
+      "lat": 36.8166,
+      "lon": -76.296,
+      "elevation_m": 4.4,
+      "tier": 1,
+      "kw": 240.0,
+      "category": "radiological control"
+    },
+    {
+      "name": "Fire Station and Yard Security",
+      "type": "Facility",
+      "kind": "facility",
+      "lat": 36.8188,
+      "lon": -76.2918,
+      "elevation_m": 5.1,
+      "tier": 1,
+      "kw": 180.0,
+      "category": "life safety"
+    },
+    {
+      "name": "Waterfront Communications",
+      "type": "Facility",
+      "kind": "facility",
+      "lat": 36.811,
+      "lon": -76.292,
+      "elevation_m": 3.5,
+      "tier": 1,
+      "kw": 210.0,
+      "category": "communications"
+    },
+    {
+      "name": "Ship Service Power, Piers 1-4",
+      "type": "Facility",
+      "kind": "facility",
+      "lat": 36.8142,
+      "lon": -76.3018,
+      "elevation_m": 2.1,
+      "tier": 2,
+      "kw": 1250.0,
+      "category": "hotel load to docked vessels"
+    },
+    {
+      "name": "Portal Crane Bank",
+      "type": "Facility",
+      "kind": "facility",
+      "lat": 36.813,
+      "lon": -76.2968,
+      "elevation_m": 2.8,
+      "tier": 2,
+      "kw": 880.0,
+      "category": "material handling"
+    },
+    {
+      "name": "Building 171 Machine Shop",
+      "type": "Facility",
+      "kind": "facility",
+      "lat": 36.8172,
+      "lon": -76.299,
+      "elevation_m": 4.6,
+      "tier": 2,
+      "kw": 760.0,
+      "category": "industrial shops"
+    },
+    {
+      "name": "Weld and Plate Shop",
+      "type": "Facility",
+      "kind": "facility",
+      "lat": 36.8184,
+      "lon": -76.2964,
+      "elevation_m": 4.9,
+      "tier": 2,
+      "kw": 540.0,
+      "category": "industrial shops"
+    },
+    {
+      "name": "Compressed Air Plant",
+      "type": "Facility",
+      "kind": "facility",
+      "lat": 36.8152,
+      "lon": -76.2998,
+      "elevation_m": 3.8,
+      "tier": 2,
+      "kw": 410.0,
+      "category": "industrial utilities"
+    },
+    {
+      "name": "Yard Administration",
+      "type": "Facility",
+      "kind": "facility",
+      "lat": 36.8214,
+      "lon": -76.2952,
+      "elevation_m": 5.8,
+      "tier": 3,
+      "kw": 320.0,
+      "category": "administration"
+    },
+    {
+      "name": "Supply Warehouse Complex",
+      "type": "Facility",
+      "kind": "facility",
+      "lat": 36.8098,
+      "lon": -76.2976,
+      "elevation_m": 3.7,
+      "tier": 3,
+      "kw": 260.0,
+      "category": "supply storage"
+    },
+    {
+      "name": "Yard Galley",
+      "type": "Facility",
+      "kind": "facility",
+      "lat": 36.8194,
+      "lon": -76.2944,
+      "elevation_m": 5.3,
+      "tier": 3,
+      "kw": 190.0,
+      "category": "food service"
+    },
+    {
+      "name": "Parking and Yard Lighting",
+      "type": "Facility",
+      "kind": "facility",
+      "lat": 36.8222,
+      "lon": -76.2976,
+      "elevation_m": 6.0,
+      "tier": 3,
+      "kw": 140.0,
+      "category": "site services"
+    }
+  ],
+  "conductors": [
+    {
+      "from": "Portsmouth 115kV Switching Station",
+      "to": "Yard Main Switchgear",
+      "label": "Portsmouth 115kV Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "Gilmerton 34.5kV Substation",
+      "to": "South Yard Switchgear",
+      "label": "Gilmerton 34.5kV Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "Yard Main Switchgear",
+      "to": "North Yard Switchgear",
+      "label": "Main-North Tie",
+      "normally_open": false
+    },
+    {
+      "from": "Yard Main Switchgear",
+      "to": "Waterfront Substation A",
+      "label": "Main-Waterfront A",
+      "normally_open": false
+    },
+    {
+      "from": "South Yard Switchgear",
+      "to": "Waterfront Substation B",
+      "label": "South-Waterfront B",
+      "normally_open": false
+    },
+    {
+      "from": "Yard Generator Plant 1",
+      "to": "Yard Main Switchgear",
+      "label": "Gen Plant 1 Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "Yard Generator Plant 2",
+      "to": "South Yard Switchgear",
+      "label": "Gen Plant 2 Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "Dry Dock 8 Standby Generator",
+      "to": "Waterfront Substation A",
+      "label": "DD8 Standby Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "Radiological Control UPS",
+      "to": "North Yard Switchgear",
+      "label": "Rad Control UPS Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "Waterfront Comms UPS",
+      "to": "Waterfront Substation B",
+      "label": "Comms UPS Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "Waterfront Substation A",
+      "to": "Dry Dock 8 Dewatering Pumps",
+      "label": "DD8 Pump Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "Waterfront Substation A",
+      "to": "Dry Dock 3 Dewatering Pumps",
+      "label": "DD3 Pump Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "Waterfront Substation A",
+      "to": "Ship Service Power, Piers 1-4",
+      "label": "Pier Service Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "Waterfront Substation A",
+      "to": "Portal Crane Bank",
+      "label": "Crane Bank Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "North Yard Switchgear",
+      "to": "Reactor Servicing Facility",
+      "label": "Reactor Servicing Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "North Yard Switchgear",
+      "to": "Radiological Monitoring Center",
+      "label": "Rad Monitoring Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "North Yard Switchgear",
+      "to": "Fire Station and Yard Security",
+      "label": "Fire and Security Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "North Yard Switchgear",
+      "to": "Building 171 Machine Shop",
+      "label": "Building 171 Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "North Yard Switchgear",
+      "to": "Weld and Plate Shop",
+      "label": "Weld Shop Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "North Yard Switchgear",
+      "to": "Yard Galley",
+      "label": "Galley Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "North Yard Switchgear",
+      "to": "Parking and Yard Lighting",
+      "label": "Yard Lighting Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "North Yard Switchgear",
+      "to": "Yard Administration",
+      "label": "Administration Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "Waterfront Substation B",
+      "to": "Waterfront Communications",
+      "label": "Comms Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "Waterfront Substation B",
+      "to": "Compressed Air Plant",
+      "label": "Compressed Air Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "South Yard Switchgear",
+      "to": "Supply Warehouse Complex",
+      "label": "Warehouse Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "Waterfront Substation A",
+      "to": "Waterfront Substation B",
+      "label": "Waterfront Tie",
+      "normally_open": true
+    },
+    {
+      "from": "North Yard Switchgear",
+      "to": "South Yard Switchgear",
+      "label": "North-South Yard Tie",
+      "normally_open": true
+    },
+    {
+      "from": "Yard Generator Plant 1",
+      "to": "Yard Generator Plant 2",
+      "label": "Generator Plant Cross-Tie",
+      "normally_open": true
+    }
+  ]
+}

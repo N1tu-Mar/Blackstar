@@ -36,13 +36,37 @@ def play(memory: bool) -> list[float] {
 }
 
 
-"""Lowest endurance the site reached across an arm - the number that matters."""
+"""Lowest endurance the site reached across an arm."""
 def worst(xs: list[float]) -> float {
     lo = xs[0];
     for x in xs {
         if x < lo { lo = x; }
     }
     return lo;
+}
+
+
+"""Total endurance the site held across the campaign - lower means RED did better.
+
+`worst` alone saturates: once a tier-1 load is stranded every arm reads 0.0 and
+the arms are indistinguishable no matter how differently they got there. The
+sum keeps measuring after the floor is hit.
+"""
+def total(xs: list[float]) -> float {
+    t = 0.0;
+    for x in xs { t += x; }
+    return t;
+}
+
+
+"""First round in which RED stranded critical care, or 0 if it never did."""
+def first_kill(xs: list[float]) -> int {
+    i = 1;
+    for x in xs {
+        if x <= 0.001 { return i; }
+        i += 1;
+    }
+    return 0;
 }
 
 
@@ -54,13 +78,13 @@ with entry:__main__ {
     b = play(False);
 
     print("\n=== RESULT ===");
-    print(f"  memory ON  endurance by round: {[f'{x:.1f}' for x in a]}   worst {worst(a):.1f}h");
-    print(f"  memory OFF endurance by round: {[f'{x:.1f}' for x in b]}   worst {worst(b):.1f}h");
-    delta = worst(b) - worst(a);
-    if delta > 0.5 {
-        print(f"  -> memory made RED MORE dangerous: it drove the site {delta:.1f} h lower.");
-    } elif delta < (0.0 - 0.5) {
-        print(f"  -> memory did NOT help this run: blind RED did {(0.0 - delta):.1f} h better.");
+    print(f"  memory ON  by round: {[f'{x:.1f}' for x in a]}   worst {worst(a):.1f}h  total {total(a):.1f}  first kill round {first_kill(a)}");
+    print(f"  memory OFF by round: {[f'{x:.1f}' for x in b]}   worst {worst(b):.1f}h  total {total(b):.1f}  first kill round {first_kill(b)}");
+    delta = total(b) - total(a);
+    if delta > 1.0 {
+        print(f"  -> memory made RED MORE dangerous: {delta:.1f} h less endurance held across the campaign.");
+    } elif delta < (0.0 - 1.0) {
+        print(f"  -> memory did NOT help this run: blind RED held the site {(0.0 - delta):.1f} h lower.");
     } else {
         print("  -> no separation. Grow the campus or hide more from the dashboard.");
     }

@@ -183,6 +183,13 @@ def build_campus -> Run {
     wire(bus_cep, bus_north, "CEP North Tie");
     wire(bus_cep, bus_south, "CEP South Tie");
 
+    # Sectionalized plant bus. Each machine also has a direct breaker onto a
+    # campus bus, so losing the plant bus itself does not orphan 3000 kW of
+    # generation. Without these the plant bus is a one-strike kill, and the
+    # memory A/B saturates in round 1 with no headroom left to measure.
+    wire(gen1, bus_north, "Gen 1 North Direct");
+    wire(gen2, bus_south, "Gen 2 South Direct");
+
     # Campus distribution.
     wire(bus_north, bus_ca, "North to Charette A");
     wire(bus_north, bus_cb, "North to Charette B");

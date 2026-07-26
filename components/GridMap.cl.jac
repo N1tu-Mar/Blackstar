@@ -65,9 +65,36 @@ def py(lat: float, hi: float, span: float, height: float) -> float {
 }
 
 
-"""Stagger label offset so dense clusters do not overprint each other."""
-def label_dy(idx: int, r: float) -> float {
-    return (0.0 - r) - 6.0 if (idx % 2) == 0 else r + 12.0;
+"""Vertical offset for a label, avoiding collisions with earlier labels.
+
+The Charette wing packs eight elements into a small patch of the campus, so a
+fixed offset overprints. Each label counts how many already-placed labels sit
+within its own text box and steps out of the way, alternating above and below
+so a dense cluster fans out instead of stacking one direction off the canvas.
+"""
+def label_dy(nodes: list[MapNode], idx: int, r: float,
+             lon_lo: float, lon_span: float, lat_hi: float, lat_span: float,
+             width: float, height: float) -> float {
+    me = nodes[idx];
+    mx = px(me.lon, lon_lo, lon_span, width);
+    my = py(me.lat, lat_hi, lat_span, height);
+
+    crowd = 0;
+    for j in range(idx) {
+        o = nodes[j];
+        ox = px(o.lon, lon_lo, lon_span, width);
+        oy = py(o.lat, lat_hi, lat_span, height);
+        dx = mx - ox;
+        dy = my - oy;
+        if dx < 0.0 { dx = 0.0 - dx; }
+        if dy < 0.0 { dy = 0.0 - dy; }
+        # Roughly one label's footprint at 9px monospace.
+        if dx < 95.0 and dy < 26.0 { crowd += 1; }
+    }
+
+    step = float(crowd / 2) * 11.0;
+    if (crowd % 2) == 0 { return (0.0 - r) - 6.0 - step; }
+    return r + 12.0 + step;
 }
 
 
@@ -139,7 +166,7 @@ def:pub GridMap(nodes: list[MapNode], edges: list[MapEdge], width: float, height
                         />
                         <text
                             x={px(n.lon, lon_lo, lon_span, width)}
-                            y={py(n.lat, lat_hi, lat_span, height) + label_dy(idx, radius_of(n.kind, n.kw))}
+                            y={py(n.lat, lat_hi, lat_span, height) + label_dy(nodes, idx, radius_of(n.kind, n.kw), lon_lo, lon_span, lat_hi, lat_span, width, height)}
                             textAnchor="middle"
                             fill="#c9cfda"
                             fontSize="9"

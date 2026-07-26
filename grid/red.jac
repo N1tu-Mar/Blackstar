@@ -23,7 +23,9 @@ out first" - and there is no variable in this system that holds that. Round
 RED sees `Dashboard`. Conductors are not in it.
 """
 
-import from jaclang.byllm.lib { Model }
+# byllm 0.6.19 exposes this as `byllm.lib`; the `jaclang.byllm.lib` path only
+# exists on older builds and dies here with a bare ModuleNotFoundError at import.
+import from byllm.lib { Model }
 import from grid.model {
     GridNode, Substation, Generator, Battery, Facility, Conductor,
     Dashboard, FacilityView, IslandView, Strike, Scenario, Outcome, Lesson, Event, Tick,

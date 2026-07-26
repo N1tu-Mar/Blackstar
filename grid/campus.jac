@@ -171,7 +171,9 @@ def find_element(built: list[GridNode], name: str) -> GridNode | None {
 """Build the active site's graph and attach it to root."""
 def build_campus -> Run {
     cfg = site_config();
-    run = root ++> Run(site=site_name(), memory_enabled=True);
+    # `++>` evaluates to a *list* of the nodes it connected, so index it. Without
+    # the [0] every caller gets a list and LoadSite dies on `run.memory_enabled`.
+    run = (root ++> Run(site=site_name(), memory_enabled=True))[0];
 
     built: list[GridNode] = [];
     specs: list[dict] = cfg.get("elements", []);

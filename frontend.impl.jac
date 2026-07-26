@@ -115,3 +115,30 @@ impl app.onExplain -> None {
     }
     busy = False;
 }
+
+
+impl app.onReport -> None {
+    busy = True;
+    status = "Producing the mandated report from the decision record...";
+    res = root spawn GetReportLines();
+    report_lines = res.reports;
+    status = "";
+    busy = False;
+}
+
+
+impl app.onOracle -> None {
+    busy = True;
+    status = "Searching for the worst possible attack, with no AI involved...";
+    res = root spawn RunOracle(depth=2, beam=6);
+    if res.reports {
+        o = res.reports[0];
+        oracle_line = (
+            f"Worst attack findable without AI: {o.best.label} - leaves "
+            f"{o.best.endurance_after:.1f} h. {o.searched} combinations simulated "
+            f"and undone; nothing on screen moved."
+        );
+    }
+    status = "";
+    busy = False;
+}

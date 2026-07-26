@@ -13,7 +13,8 @@ sv import from endpoints {
     Dashboard, FacilityView, IslandView, Explanation, ExplainLine, Lesson,
     MapView, MapNode, MapEdge, RoundResult, SiteSummary,
     GetDashboard, GetMap, GetBasemap, LoadSite, ListSites, CutConductor,
-    RunBlue, RunRound, GetLessons, ExplainWhy
+    RunBlue, RunRound, GetLessons, ExplainWhy,
+    GetReportLines, RunOracle
 }
 
 def:pub app -> JsxElement {
@@ -34,6 +35,8 @@ def:pub app -> JsxElement {
         site: str = "",
         endurance: float = 0.0,
         target: float = 96.0,
+        report_lines: list[ExplainLine] = [],
+        oracle_line: str = "",
         subject: str = "Galley and Food Service",
         status: str = "",
         busy: bool = False;
@@ -50,6 +53,8 @@ def:pub app -> JsxElement {
     async def onRunBlue -> None;
     async def onRunRound -> None;
     async def onExplain -> None;
+    async def onReport -> None;
+    async def onOracle -> None;
 
     under = endurance < target;
 
@@ -127,6 +132,8 @@ def:pub app -> JsxElement {
                     <button onClick={onCutBoth} disabled={busy} style={BTN}>Cut all grid power</button>
                     <button onClick={onRunBlue} disabled={busy} style={BTN}>Protect critical care</button>
                     <button onClick={onRunRound} disabled={busy} style={BTN_PRIMARY}>Simulate a disaster</button>
+                    <button onClick={onOracle} disabled={busy} style={BTN}>Worst attack, no AI</button>
+                    <button onClick={onReport} disabled={busy} style={BTN}>File the legal report</button>
                 </div>
 
                 <p style={{"color": "#737373", "fontSize": "0.85rem", "minHeight": "1.4rem", "margin": "0 0 1.25rem"}}>
@@ -140,6 +147,24 @@ def:pub app -> JsxElement {
                     <GridMap nodes={map_nodes} edges={map_edges}
                              satellite={satellite} view_w={view_w} view_h={view_h}
                              attribution={attribution}/>
+                </div>
+
+                <div style={{"fontSize": "0.85rem", "color": "#0a0a0a", "marginBottom": "1rem"}}>
+                    {oracle_line}
+                </div>
+
+                <div style={{"marginBottom": "1rem"}}>
+                    <h2 style={H2}>{"Mandated report" if len(report_lines) > 0 else ""}</h2>
+                    {[
+                        <div key={str(idx)} style={{
+                            "fontSize": "0.85rem", "lineHeight": "1.5",
+                            "padding": "0.35rem 0", "borderBottom": "1px solid #f5f5f5"
+                        }}>
+                            <span style={{"color": "#a3a3a3", "marginRight": "0.5rem"}}>{line.ref}</span>
+                            {line.text}
+                        </div>
+                        for (idx, line) in enumerate(report_lines)
+                    ]}
                 </div>
 
                 <div style={{"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "3rem"}}>

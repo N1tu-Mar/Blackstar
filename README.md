@@ -30,6 +30,10 @@ jac run scripts/demo.jac      # the pitch demo: cuts, shedding, "why did the Gal
 jac run scripts/redloop.jac   # two full RED rounds with memory (~90 s, 4 LLM calls)
 jac run scripts/ab.jac        # the A/B: memory on vs off, 3 rounds each (~5 min, 12 LLM calls)
 
+# These two need no API key and make no network call:
+jac run scripts/report.jac    # the mandated §2925 / CMS filing, generated from the run graph
+jac run scripts/oracle.jac    # the model-free damage bound + a one-strike-kill check (~30 s)
+
 # Refresh the frozen basemap (needs network; do NOT run this on demo day)
 python3 scripts/fetch_basemap.py
 ```
@@ -49,6 +53,8 @@ python3 scripts/fetch_basemap.py
 | Public walker API | `endpoints.sv.jac` | ✅ verified via `scripts/demo.jac` |
 | Operator console + campus map | `frontend.cl.jac`, `components/GridMap.cl.jac` | ✅ verified in-browser, over real OSM geography |
 | Memory A/B | `scripts/ab.jac` | ✅ separates — memory kills a round earlier |
+| Mandated §2925 / CMS filing, cited to the archive | `grid/report.jac` | ✅ verified by run, no API key needed |
+| ORACLE: model-free damage bound + campus design check | `grid/oracle.jac` | ✅ verified by run, no API key needed |
 
 **The simulation core is verified end to end.** This cascade was produced by an actual run, not by hand:
 
@@ -121,6 +127,14 @@ What is *not* portable is the tier assignment. Deciding that the ICU is tier 1
 and the galley is tier 3 is a judgement a facility's own engineers make, and
 it is the input the whole defence rests on. The tool computes consequences of
 that list; it does not author it.
+
+Two additions layered on top of the core, both additive and both runnable without a
+model: the mandated filing that invariant 5 promises, and a deterministic adversary
+that measures what RED's model actually buys. See
+[`ORACLE_AND_REPORT.md`](ORACLE_AND_REPORT.md) — including the one-strike kill it
+found on the current campus.
+
+---
 
 ## Design invariants
 

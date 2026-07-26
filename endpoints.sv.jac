@@ -29,6 +29,8 @@ import from grid.prov {
     active_run, write_tick, record_event, record_finding, record_decision,
     open_round, record_lesson, all_lessons, explain, link_lessons, why_round
 }
+import from grid.report { build_report, render_markdown, flatten_lines, ComplianceReport }
+import from grid.oracle { worst_chain, OracleResult }
 
 
 """Ensure a campus exists, building one on first call."""
@@ -343,5 +345,71 @@ walker:pub RunRound {
             lesson=lesson,
             dashboard=build_dashboard(run.tick, run.round_index, recent_event_text(12))
         );
+    }
+}
+
+
+# ------------------------------------------------------- filing and the bound
+
+walker:pub GenerateReport {
+    """Project the run archive into the mandated resilience filing.
+
+    Reads only: no tick is advanced and no node is written, so a reviewer can
+    pull the filing at any point without perturbing the scenario on screen.
+    """
+    has reports: list[ComplianceReport] = [];
+
+    can go with Root entry {
+        _ = ensure_run();
+        report build_report();
+    }
+}
+
+
+walker:pub GetReportMarkdown {
+    """The same filing rendered as markdown, ready to download or hand over."""
+    has reports: list[str] = [];
+
+    can go with Root entry {
+        _ = ensure_run();
+        report render_markdown(build_report());
+    }
+}
+
+
+walker:pub RunOracle {
+    """Search for the worst chain a model-free adversary can find.
+
+    The bound RED is measured against. Every candidate chain is simulated and
+    then undone, and nothing is written to the provenance archive - so this is
+    safe to click mid-demo, and the numbers on screen do not move.
+
+    `depth` and `beam` are clamped: an unbounded beam would let one click sit
+    on the request thread for minutes.
+    """
+    has depth: int = 2,
+        beam: int = 6,
+        reports: list[OracleResult] = [];
+
+    can go with Root entry {
+        _ = ensure_run();
+        d = self.depth;
+        if d < 1 { d = 1; }
+        if d > 3 { d = 3; }
+        b = self.beam;
+        if b < 1 { b = 1; }
+        if b > 12 { b = 12; }
+        report worst_chain(d, b);
+    }
+}
+
+
+walker:pub GetReportLines {
+    """The filing flattened to cited lines, for the console panel."""
+    has reports: list[ExplainLine] = [];
+
+    can go with Root entry {
+        _ = ensure_run();
+        for l in flatten_lines(build_report()) { report l; }
     }
 }

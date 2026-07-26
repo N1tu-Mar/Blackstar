@@ -30,7 +30,7 @@ import from grid.prov {
     open_round, record_lesson, all_lessons, explain, link_lessons, why_round
 }
 import from grid.report { build_report, render_markdown, flatten_lines, ComplianceReport }
-import from grid.oracle { worst_chain, coverage, OracleResult, Coverage, Blindspot }
+import from grid.oracle { worst_chain, coverage, coverage_lines, OracleResult, Coverage, Blindspot }
 
 
 """Ensure a campus exists, building one on first call."""
@@ -430,5 +430,20 @@ walker:pub RunCoverage {
         if b < 1 { b = 1; }
         if b > 12 { b = 12; }
         report coverage(b);
+    }
+}
+
+
+walker:pub GetCoverageLines {
+    """Coverage flattened to cited lines, for the console panel."""
+    has beam: int = 6,
+        reports: list[ExplainLine] = [];
+
+    can go with Root entry {
+        _ = ensure_run();
+        b = self.beam;
+        if b < 1 { b = 1; }
+        if b > 12 { b = 12; }
+        for l in coverage_lines(coverage(b)) { report l; }
     }
 }

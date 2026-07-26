@@ -114,6 +114,21 @@ def site_satellite_path -> str {
 }
 
 
+"""Unwrap a `++>` connect expression to the single node it created.
+
+`++>` evaluates to a *list* of the nodes it attached on some jac builds and to
+the node itself on others. Hardcoding either shape breaks the app on the other
+toolchain: with a bare `[0]` the official 0.34.x binary dies with "'Run' object
+is not subscriptable" on the first LoadSite, and without it the builds that do
+return a list hand every caller a list and the next `.name` access dies with
+"'list' object has no attribute 'name'". Every spawn site goes through here so
+the campus loads on both.
+"""
+def spawned_one(spawned: object) -> object {
+    return spawned[0] if isinstance(spawned, list) else spawned;
+}
+
+
 """Instantiate one element from its JSON description."""
 def make_element(spec: dict) -> GridNode {
     kind = str(spec.get("kind", "bus"));
@@ -123,43 +138,39 @@ def make_element(spec: dict) -> GridNode {
     elev: float = spec.get("elevation_m", 5.0);
     etype = str(spec.get("type", ""));
 
-    # Every return here indexes the `++>` result for the same reason
-    # build_campus does: the connect operator evaluates to a list of the nodes
-    # it attached, so returning it bare hands callers a [GridNode] and the next
-    # `.name` access dies with "'list' object has no attribute 'name'".
     if etype == "Substation" {
-        return (root ++> Substation(
+        return spawned_one(root ++> Substation(
             name=name, kind=kind, lat=lat, lon=lon, elevation_m=elev,
             kv=spec.get("kv", 34.5),
             utility_source=spec.get("utility_source", False)
-        ))[0];
+        )) as GridNode;
     }
     if etype == "Generator" {
-        return (root ++> Generator(
+        return spawned_one(root ++> Generator(
             name=name, kind=kind, lat=lat, lon=lon, elevation_m=elev,
             kw_rating=spec.get("kw_rating", 0.0),
             fuel_gal=spec.get("fuel_gal", 0.0)
-        ))[0];
+        )) as GridNode;
     }
     if etype == "Battery" {
-        return (root ++> Battery(
+        return spawned_one(root ++> Battery(
             name=name, kind=kind, lat=lat, lon=lon, elevation_m=elev,
             kwh_stored=spec.get("kwh_stored", 0.0),
             kwh_capacity=spec.get("kwh_capacity", 0.0),
             max_kw=spec.get("max_kw", 0.0)
-        ))[0];
+        )) as GridNode;
     }
     if etype == "Facility" {
-        return (root ++> Facility(
+        return spawned_one(root ++> Facility(
             name=name, kind=kind, lat=lat, lon=lon, elevation_m=elev,
             tier=spec.get("tier", 3),
             kw=spec.get("kw", 0.0),
             category=str(spec.get("category", "support"))
-        ))[0];
+        )) as GridNode;
     }
-    return (root ++> GridNode(
+    return spawned_one(root ++> GridNode(
         name=name, kind=kind, lat=lat, lon=lon, elevation_m=elev
-    ))[0];
+    )) as GridNode;
 }
 
 
@@ -175,9 +186,13 @@ def find_element(built: list[GridNode], name: str) -> GridNode | None {
 """Build the active site's graph and attach it to root."""
 def build_campus -> Run {
     cfg = site_config();
-    # `++>` evaluates to a *list* of the nodes it connected, so index it. Without
-    # the [0] every caller gets a list and LoadSite dies on `run.memory_enabled`.
-    run = (root ++> Run(site=site_name(), memory_enabled=True))[0];
+    # `++>` evaluates to a *list* of connected nodes on some jac builds and to the
+    # node itself on others, so unwrap defensively. Hardcoding either shape breaks
+    # the app on the other toolchain: with a bare [0] the official 0.34.x binary
+    # dies here with "'Run' object is not subscriptable", and without it builds
+    # that do return a list hand every caller a list and LoadSite dies on
+    # `run.memory_enabled`.
+    run = spawned_one(root ++> Run(site=site_name(), memory_enabled=True)) as Run;
 
     built: list[GridNode] = [];
     specs: list[dict] = cfg.get("elements", []);

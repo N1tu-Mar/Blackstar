@@ -44,7 +44,7 @@ Two invariants this file must not violate:
 
 import from grid.model {
     GridNode, Substation, Generator, Battery, Facility, Conductor, IslandView,
-    Run, Round, Event, HasRound, Struck
+    Run, Round, Event, HasRound, Struck, ExplainLine
 }
 import from grid.islands {
     all_elements, recompute_islands, survey, site_endurance, tier1_stranded
@@ -419,8 +419,8 @@ obj Coverage {
         rounds_run: int = 0,
         oracle_worst: float = 0.0,
         red_worst_element: str = "",
-        blindspots: list = [],
-        exercised: list = [],
+        blindspots: list[Blindspot] = [],
+        exercised: list[Blindspot] = [],
         summary: str = "";
 }
 
@@ -561,4 +561,36 @@ def coverage(beam: int) -> Coverage {
         );
     }
     return cov;
+}
+
+
+"""Flatten a coverage result into cited lines, for the console panel.
+
+Mirrors report.flatten_lines. Walkers reporting deeply nested objs do not get a
+POST route registered on this build, so the HTTP surface is deliberately a flat
+list of the same ExplainLine rows the explain panel already renders.
+"""
+def coverage_lines(cov: Coverage) -> list[ExplainLine] {
+    out: list[ExplainLine] = [];
+    out.append(ExplainLine(ref="", text=cov.summary));
+    if len(cov.blindspots) > 0 {
+        out.append(ExplainLine(ref="", text="Never tested by the adversary, and damaging:"));
+        for b in cov.blindspots {
+            tag = "STRANDS TIER 1" if b.strands_tier1 else "under requirement";
+            out.append(ExplainLine(
+                ref=b.kind[:5],
+                text=f"{b.element_name} - {b.mechanism} leaves {b.endurance_after:.1f} h  [{tag}]"
+            ));
+        }
+    }
+    if len(cov.exercised) > 0 {
+        out.append(ExplainLine(ref="", text="Already exercised by the adversary:"));
+        for b in cov.exercised {
+            out.append(ExplainLine(
+                ref=b.kind[:5],
+                text=f"{b.element_name} - {b.mechanism} leaves {b.endurance_after:.1f} h"
+            ));
+        }
+    }
+    return out;
 }

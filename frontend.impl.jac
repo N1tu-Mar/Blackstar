@@ -142,3 +142,13 @@ impl app.onOracle -> None {
     status = "";
     busy = False;
 }
+
+
+impl app.onCoverage -> None {
+    busy = True;
+    status = "Sweeping every single failure the adversary never tried...";
+    res = root spawn GetCoverageLines();
+    report_lines = res.reports;
+    status = "";
+    busy = False;
+}

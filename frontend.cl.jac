@@ -14,7 +14,7 @@ sv import from endpoints {
     MapView, MapNode, MapEdge, RoundResult, SiteSummary,
     GetDashboard, GetMap, GetBasemap, LoadSite, ListSites, CutConductor,
     RunBlue, RunRound, GetLessons, ExplainWhy,
-    GetReportLines, RunOracle
+    GetReportLines, RunOracle, GetCoverageLines
 }
 
 def:pub app -> JsxElement {
@@ -55,6 +55,7 @@ def:pub app -> JsxElement {
     async def onExplain -> None;
     async def onReport -> None;
     async def onOracle -> None;
+    async def onCoverage -> None;
 
     under = endurance < target;
 
@@ -133,6 +134,7 @@ def:pub app -> JsxElement {
                     <button onClick={onRunBlue} disabled={busy} style={BTN}>Protect critical care</button>
                     <button onClick={onRunRound} disabled={busy} style={BTN_PRIMARY}>Simulate a disaster</button>
                     <button onClick={onOracle} disabled={busy} style={BTN}>Worst attack, no AI</button>
+                    <button onClick={onCoverage} disabled={busy} style={BTN}>What we never tested</button>
                     <button onClick={onReport} disabled={busy} style={BTN}>File the legal report</button>
                 </div>
 

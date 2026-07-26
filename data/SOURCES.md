@@ -52,7 +52,7 @@ criteria document for DoD medical facilities. Our model is shaped by it:
 | Two utility feeders from two substations | ¶11-3.3.1 — *"Provide hospitals with two primary feeders… **Connect primary feeders to different power sources** (main electric supply substations) if available, and differently route the two primary feeders such that they are **electrically and geographically separated**."* Each sized for full hospital demand + 20% growth. |
 | 34.5 kV feeders | ¶11-3.1 lists 34.5 kV among installation primary distribution voltages. |
 | Normally-open tie switches | ¶11-3.3.3 — *"Design all double-ended substations for **normal open tie breaker** operation, which is interlocked with the main breakers, so that all three breakers 'main-tie-main' cannot be closed simultaneously. **Upon loss of a single transformer or its feeder, the main breaker is automatically opened and the tie breaker is automatically closed**."* |
-| A 96-hour endurance target | ¶11-4.12.1 — *"**Provide a four day capacity at full load for the fuel oil tank**."* Four days is 96 hours. Day tanks separately sized for ≥4 hours. |
+| Four days of on-site fuel | ¶11-4.12.1 — *"**Provide a four day capacity at full load for the fuel oil tank**."* Day tanks separately sized for ≥4 hours. **This is a fuel-storage rule, not the 96-hour target — see the correction below.** |
 | Generators carrying load immediately | ¶11-4.4 — *"the ability to **start and assume its full electrical loads within 10 seconds**"*, plus alarms for *"less than four hours of fuel supply."* |
 | Diesel, never gas | ¶11-4.12.3 — *"**Do not use natural gas** or comparable gas fuel as an operating fuel for hospital emergency power generation."* |
 
@@ -96,8 +96,44 @@ Resilience Planning," Nov 2016** — a survey of 364 DoD installation respondent
 
 ### The mandates
 
-- **10 U.S.C. §2925** — energy resilience reporting for installations.
-- **42 CFR 482.15** — CMS emergency preparedness: a plan, documented, tested, reviewed.
+- **10 U.S.C. §2925**, catchline *"Annual report on energy performance, resilience,
+  and readiness of Department of Defense."* Requires a report within 240 days of
+  fiscal year end covering §§2688, 2911, 2912, 2920, 2926, *"including progress on
+  energy resilience at military installations"*; resilience metrics at (b)(1)(C).
+  **"Energy resilience" is defined at 10 U.S.C. §101(f)(6)**, not §2911.
+- **42 CFR 482.15** — CMS emergency preparedness: a plan, documented, tested,
+  reviewed. §482.15(e)(3) requires hospitals with on-site fuel to have *"a plan for
+  how it will keep emergency power systems operational during the emergency, unless
+  it evacuates."* It **sets no fuel-hour minimum.**
+
+### Correction: where 96 hours actually comes from, and what it is not
+
+We used to imply the UFC's four-day fuel rule *is* the 96-hour target. It is not.
+They are separate requirements that happen to coincide.
+
+**96 hours is a Joint Commission emergency-management planning element** — formerly
+EM.02.01.01 EP 3, now **EM.12.02.09 EP 3** — and the standard has carried this note
+since 2009: *"Hospitals are not required to stockpile supplies to last for 96 hours
+of operation."* It is a **planning horizon, not a stockpile mandate.**
+
+CMS was asked in 2016 to codify 72–96 hours and **declined** — **81 FR 63880**:
+*"We disagree with setting a rigid amount of subsistence to have on hand."*
+
+There is also **no NFPA 110 "Class 96."** 96 hours is always Class X, and NFPA 110's
+mandatory 96-hour rule applied only to seismic categories C–F and was **deleted in
+the 2013 edition.**
+
+So `target_hours: 96.0` in the site file is a defensible planning figure with a real
+provenance — and it is a figure a facility chooses, not one a statute imposes. Say it
+that way.
+
+### Correction: the 8-hour outage threshold is not statutory
+
+The 8-hour paragraph in §2925 **was struck** in Dec 2022 by Pub. L. 117-263
+§314(b)(1). The 8-hour threshold is OSD's data-call convention, not law —
+**GAO-15-749, App. I n.1**: *"we are defining utility disruption as an outage or
+interruption of service lasting eight hours or longer. This definition is used by
+DOD in its Energy Reports."*
 - Imagery: **Esri World Imagery** (Esri, Maxar, Earthstar Geographics), frozen
   locally by `scripts/fetch_satellite.py` so the demo never calls a tile server.
 - Geography: element coordinates sit inside the real NMCP bounding box
@@ -169,3 +205,49 @@ reports *station datum*, and at Sewells Point (8638610) the two differ by
 4.38 ft — more than the whole minor-to-major range. An earlier version of this
 script mixed metric CO-OPS levels with invented headroom and produced a 13 ft
 surge stage. Everything is ft MLLW now, converted once.
+
+
+---
+
+## Reference datasets in the repo
+
+Frozen under `data/reference/`. Nothing on stage calls a network service.
+
+| File | Records | Source |
+|---|---|---|
+| `hifld_military_hospitals.geojson` | **282** hospitals with `TYPE='MILITARY'`, 33 fields | HIFLD Hospitals FeatureServer. NMCP: `BEDS=202, HELIPAD=Y, 36.84541/-76.30577`; WRNMMC: `BEDS=244` |
+| `mirta_targets.geojson` | 2 DoD installation boundary polygons | MIRTA. `NAVMEDCEN Portsmouth VA` — 45 vertices, geodesic **116.3 acres**; `NAVSUPPACT Bethesda MD` — 129 vertices, 237.7 acres |
+| `eaglei_2020_isaias_hamptonroads.csv` | **1,758** rows, 15-min, 3–5 Aug 2020, 8 jurisdictions | ORNL EAGLE-I (DOI 10.6084/m9.figshare.24237376), CC BY 4.0 |
+| `cms_dod_hospitals.csv` / `cms_pos_beds.json` | 2 DoD CCNs | CMS. NMCP is CCN **49008F**, `Hospital Type="Acute Care - Department of Defense"` |
+| `noaa_EZMV2_gauge.json`, `noaa_8638610_floodlevels.json` | gauge metadata + thresholds | NWS NWPS / NOAA CO-OPS |
+
+### The storm this is calibrated against
+
+**Hurricane Isaias, 4 August 2020.** From the EAGLE-I file: Portsmouth city
+(FIPS 51740) peaked at **14,872 customers without power at 18:15** — **34.4% of the
+city's 43,205 customers**. Region-wide peak was 258,329 out. NMCP sits inside that
+county polygon, on the Elizabeth River, 1.5 miles from a gauge whose minor-flood
+threshold is 5 ft MLLW.
+
+### Bed counts disagree, and you should say so first
+
+Three official numbers, three different things:
+
+| Number | Source | What it measures |
+|---|---|---|
+| **202** | HIFLD, 2021 | operating beds |
+| **353** | Navy Medicine, 2024 | Charette Health Care Center inpatient beds |
+| **1200** | CMS Provider of Services | *certified* capacity, cert date 1991-03-01 |
+
+A judge who checks will find all three. Lead with 202 as the operating figure and
+name the others as what they are.
+
+### Not used, and why
+
+**NREL SMART-DS** — regions are only Austin, Greensboro and San Francisco; there is
+no Virginia set. Its GIS layers are shapefiles rather than GeoJSON, and its own
+`warning.md` disclaims them: *"all Shapefiles in this GIS folder were produced before
+post-processing… may differ from the OpenDSS and CYME models."* So the pitch must not
+say "a real feeder from a national lab" — we do not use one.
+
+**NASA NCCS** hospital service — DNS does not resolve. Dead, do not cite.

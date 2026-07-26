@@ -594,3 +594,84 @@ def coverage_lines(cov: Coverage) -> list[ExplainLine] {
     }
     return out;
 }
+
+
+# ----------------------------------------------------------------- criticality
+
+"""One element's N-1 criticality: what losing it alone costs the site."""
+obj Criticality {
+    has element_name: str = "",
+        kind: str = "",
+        mechanism: str = "",
+        endurance_after: float = 0.0,
+        hours_lost: float = 0.0,
+        strands_tier1: bool = False,
+        share: float = 0.0;
+}
+
+
+"""Rank every element by what its own loss costs, worst first.
+
+The classic N-1 contingency sweep, which is how utilities and installations
+actually rank a network: fail one element at a time, measure, sort. Deterministic
+and model-free -- there is nothing here for a model to add to arithmetic.
+
+`hours_lost` is measured against the healthy baseline, and elements on utility
+are capped at the baseline so an element whose loss merely drops the site off
+grid-backed does not read as infinitely critical.
+
+Tier-1 facilities are excluded. Losing the ICU strands the ICU by definition;
+the useful question is which *infrastructure* takes critical care down with it.
+"""
+def criticality -> list[Criticality] {
+    snap = take_snapshot();
+    recompute_islands();
+    # When the site is grid-backed this is the utility sentinel rather than a
+    # real countdown. Every element is measured against the same baseline, so the
+    # ranking and `share` are unaffected either way; only the absolute
+    # `hours_lost` is sentinel-scaled, which is why callers should show `share`.
+    baseline: float = site_endurance(survey()) + 0.0;
+
+    worst: dict[str, Criticality] = {};
+    for c in candidate_strikes() {
+        target_node = element_named(c.target);
+        if target_node is None { continue; }
+        tn = target_node as GridNode;
+        if isinstance(tn, Facility) {
+            if (tn as Facility).tier == 1 { continue; }
+        }
+        res = evaluate([c]);
+        held = worst.get(c.target);
+        if held is not None and res.endurance_after >= (held as Criticality).endurance_after {
+            continue;
+        }
+        lost = baseline - res.endurance_after;
+        if lost < 0.0 { lost = 0.0; }
+        worst[c.target] = Criticality(
+            element_name=c.target, kind=kind_label(tn), mechanism=c.mechanism,
+            endurance_after=res.endurance_after, hours_lost=lost,
+            strands_tier1=res.tier1_stranded
+        );
+    }
+
+    out: list[Criticality] = [];
+    peak = 0.0;
+    for name in worst.keys() {
+        w = worst[name];
+        if w.hours_lost > peak { peak = w.hours_lost; }
+        out.append(w);
+    }
+    # Share of the worst loss, so the caller can colour a map without rescaling.
+    for w in out {
+        w.share = (w.hours_lost / peak) if peak > 0.0 else 0.0;
+    }
+
+    restore(snap);
+    return sorted(out, key=crit_order);
+}
+
+
+"""Worst first: most hours lost, tier-1 stranders ahead of ties, then name."""
+def crit_order(c: Criticality) -> tuple[float, int, str] {
+    return (0.0 - c.hours_lost, 0 if c.strands_tier1 else 1, c.element_name);
+}

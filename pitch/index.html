@@ -477,14 +477,35 @@
 
     <div class="cols">
       <div class="stack">
+        <p style="color:var(--ink-2)">
+          This page is the pitch. The <strong>operator console</strong> is the
+          actual product — Ryan's UI, the campus over real satellite imagery, with
+          the map fracturing as you cut feeders.
+        </p>
         <div class="cta">
-          <a class="b1" href="http://localhost:8000">Open the console →</a>
+          <a class="b1" href="https://github.com/N1tu-Mar/Blackstar/blob/main/demo/blackstart-demo.mp4">Watch the 66-second demo →</a>
           <a class="b2" href="https://github.com/N1tu-Mar/Blackstar">Read the code</a>
         </div>
-        <p style="color:var(--ink-3); font-size:12.5px; max-width:none">
-          Runs locally with <code>jac start --dev main.jac</code>. A recorded
-          66-second take is in <code>demo/</code> if the venue network disagrees.
-        </p>
+        <div class="box" style="margin-top:4px">
+          <span class="lab">Run the console yourself</span>
+          <pre style="margin-top:6px">cp .env.example .env       <span class="cm"># add ANTHROPIC_API_KEY</span>
+jac install
+set -a &amp;&amp; . ./.env &amp;&amp; set +a
+jac start --dev main.jac</pre>
+          <p style="font-size:13px">
+            Then open <a href="http://localhost:8002">localhost:8002</a>. The dev
+            server prints the port it chose — if 8002 is taken it moves up, so read
+            the <code>App:</code> line rather than trusting a bookmark. The walker
+            API is on 8001.
+          </p>
+          <p style="font-size:13px; color:var(--ink-3)">
+            No key? <code>BLACKSTART_MODEL=gemini/gemini-2.0-flash</code> or
+            <code>=mockllm</code>. The deterministic half —
+            <code>scripts/oracle.jac</code>, <code>report.jac</code>,
+            <code>coverage.jac</code>, <code>blackstart.jac</code> — needs no key
+            at all.
+          </p>
+        </div>
       </div>
 
       <div class="tw">

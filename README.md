@@ -21,6 +21,13 @@ jac start --dev main.jac
 
 Type-check everything with `jac check .` before you push.
 
+Two runnable scripts prove the system without the UI:
+
+```bash
+jac run scripts/demo.jac      # the pitch demo: cuts, shedding, "why did the Galley go dark"
+jac run scripts/redloop.jac   # two full RED rounds with memory (~90 s, makes 4 LLM calls)
+```
+
 ---
 
 ## What is actually working right now
@@ -31,9 +38,9 @@ Type-check everything with `jac check .` before you push.
 | 27-element NMCP campus fixture | `grid/campus.jac` | ✅ done, verified numbers |
 | Emergent islanding + endurance math | `grid/islands.jac` | ✅ done, verified |
 | BLUE deterministic load shedding | `grid/blue.jac` | ✅ done, verified |
-| Provenance archive + backward `explain` | `grid/prov.jac` | ✅ written, type-checks |
-| RED adversary (`plan` / `reflect`) | `grid/red.jac` | ⚠️ `plan` verified live; `reflect` needs one more run to confirm |
-| Public walker API | `endpoints.sv.jac` | ✅ written, type-checks |
+| Provenance archive + backward `explain` | `grid/prov.jac` | ✅ verified, cited chain walks to root cause |
+| RED adversary (`plan` / `reflect`) | `grid/red.jac` | ✅ verified live, both calls, with memory |
+| Public walker API | `endpoints.sv.jac` | ✅ verified via `scripts/demo.jac` |
 | Operator console | `frontend.cl.jac` | ⚠️ minimal — proves the round trip, needs the map |
 
 **The simulation core is verified end to end.** This cascade was produced by an actual run, not by hand:

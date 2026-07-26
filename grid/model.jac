@@ -160,6 +160,7 @@ obj Dashboard {
         islands: list[IslandView] = [],
         site_endurance_hours: float = 0.0,
         target_hours: float = 96.0,
+        strikes_allowed: int = 2,
         tier1_stranded: bool = False,
         breach: bool = False,
         recent_events: list[str] = [];

@@ -157,21 +157,46 @@ def explain(subject: str) -> Explanation {
         for tk in [f ->:DerivedFrom:->] { ticks.append(tk); }
     }
 
-    # The events that landed on that tick, and their causes.
+    # Walk the temporal spine backward from the finding's tick. The events that
+    # explain a decision usually landed on EARLIER ticks - the controller sheds
+    # at t=3 because a feeder opened at t=1 - so stopping at the finding's own
+    # tick truncates the chain right before the actual cause.
+    frontier = ticks;
+    hops = 0;
+    while hops < 12 {
+        hops += 1;
+        prev: list[Tick] = [];
+        for tk in frontier {
+            for p in [tk <-:Next:<-] { prev.append(p); }
+        }
+        if len(prev) == 0 { break; }
+        for p in prev { ticks.append(p); }
+        frontier = prev;
+    }
+    # Oldest first, so the chain reads as cause -> consequence.
+    ticks = sorted(ticks, key=lambda (t: Tick) -> int { return t.t; });
+
+    # An event can be reached both directly and through a Caused edge, so track
+    # what has already been cited and print each node once.
+    seen: set = set();
     for tk in ticks {
         evs = [tk <-:EventAt:<-];
-        ordered = sorted(evs, key=lambda (e: Event) -> str { return e.kind; });
+        ordered = sorted(evs, key=lambda (e: Event) -> int { return e.t; });
         for e in ordered {
-            out.lines.append(ExplainLine(
-                ref=ref_of("e", e),
-                text=f"t={e.t}  {e.kind}: {e.target} - {e.detail}"
-            ));
             for c in [e <-:Caused:<-] {
+                r = ref_of("e", c);
+                if r in seen { continue; }
+                seen.add(r);
                 out.lines.append(ExplainLine(
-                    ref=ref_of("e", c),
-                    text=f"t={c.t}  caused by {c.kind}: {c.target} - {c.detail}"
+                    ref=r, text=f"t={c.t}  {c.kind}: {c.target} - {c.detail}"
                 ));
             }
+            r2 = ref_of("e", e);
+            if r2 in seen { continue; }
+            seen.add(r2);
+            out.lines.append(ExplainLine(
+                ref=r2, text=f"t={e.t}  {e.kind}: {e.target} - {e.detail}"
+            ));
         }
     }
 

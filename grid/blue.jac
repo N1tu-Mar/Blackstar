@@ -71,6 +71,13 @@ def shed_to_target(target: float) -> tuple[list[str], bool] {
     }
 
     recompute_islands();
+
+    # A tier-1 load that went fully dark belongs to no island, so `survey`
+    # never reports it and the loop above cannot see it. That is the worst
+    # outcome there is, and it must not be recorded as a clean run.
+    for f in [root --> [?:Facility]] {
+        if f.tier == 1 and f.island_id == -1 { breached = True; }
+    }
     return (actions, breached);
 }
 

@@ -95,11 +95,20 @@ def build_dashboard(tick: int, round_index: int, events: list[str]) -> Dashboard
         if i.tier1_present and i.endurance_hours < TARGET_HOURS { breach = True; }
     }
 
+    # An adversary escalates; it does not open with everything it has. Round 1
+    # gets two strikes, and the budget grows as RED learns. Without this the
+    # first round flattens the campus to zero and there is no graded response
+    # left to observe.
+    allowed = round_index + 1;
+    if allowed < 2 { allowed = 2; }
+    if allowed > 4 { allowed = 4; }
+
     return Dashboard(
         site="Naval Medical Center Portsmouth",
         tick=tick, round_index=round_index,
         elements=elems, islands=islands,
         site_endurance_hours=se, target_hours=TARGET_HOURS,
+        strikes_allowed=allowed,
         tier1_stranded=tier1_stranded(islands), breach=breach,
         recent_events=events
     );
@@ -122,10 +131,10 @@ obj ScenarioDraft {
         rationales: list[str];
 }
 
-sem ScenarioDraft.name = "Short operational name for this failure chain.";
+sem ScenarioDraft.name = "A short operational codename for this specific attack, two to four words, in the style of a named storm or exercise. For example 'Tidewater Surge' or 'Dark Harbor'. Do not restate the schema or use the word scenario.";
 sem ScenarioDraft.hazard = "The physical hazard driving the chain, for example 'Category 2 hurricane, storm surge up the Elizabeth River'.";
 sem ScenarioDraft.expected_effect = "What you expect this to do to the facility's endurance and to its critical care areas.";
-sem ScenarioDraft.targets = "Between 2 and 4 element names to strike, in the order they fail. Each must match a name visible on the dashboard exactly.";
+sem ScenarioDraft.targets = "The element names to strike, in the order they fail. Each must match a name visible on the dashboard exactly. Use no more than the number of strikes the dashboard says you are allowed this round.";
 sem ScenarioDraft.mechanisms = "One mechanism per target, same order and same length as targets. Each is exactly one of: flood, wind, fuel_interdiction, cyber_switching, equipment_failure, fire.";
 sem ScenarioDraft.rationales = "One sentence per target, same order and same length as targets, saying why a real hazard would cause that failure at that point in the chain.";
 
@@ -147,7 +156,10 @@ sem draft_scenario.lessons = "What earlier rounds taught you about this facility
 def plan(view: Dashboard, lessons: list[Lesson]) -> Scenario {
     d = draft_scenario(view, lessons);
     out = Scenario(name=d.name, hazard=d.hazard, expected_effect=d.expected_effect, strikes=[]);
-    for i in range(len(d.targets)) {
+    limit = len(d.targets);
+    # The budget is enforced here, not merely requested in the prompt.
+    if limit > view.strikes_allowed { limit = view.strikes_allowed; }
+    for i in range(limit) {
         mech = d.mechanisms[i] if i < len(d.mechanisms) else "equipment_failure";
         why = d.rationales[i] if i < len(d.rationales) else "";
         out.strikes.append(Strike(

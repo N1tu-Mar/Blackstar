@@ -6,6 +6,12 @@ entry-point = "main.jac"
 kind = "web-app"
 
 [dependencies]
+# The plugins the app imports. Listed so `jac install` on a clean machine -
+# JacHammer's builder, a teammate's laptop - reproduces this environment.
+# jaclang itself is the compiler, installed before this file is read.
+byllm = "~=0.6.19"
+jac-client = "~=0.3.25"
+
 [dependencies.npm]
 react = "^18.2.0"
 react-dom = "^18.2.0"
@@ -13,6 +19,8 @@ react-router-dom = "^6.22.0"
 react-error-boundary = "^5.0.0"
 "@tanstack/react-form" = "^1.33.0"
 zod = "^4.3.6"
+react-hook-form = "^7.71.0"
+"@hookform/resolvers" = "^5.2.2"
 
 [dependencies.npm.dev]
 vite = "^6.4.1"
@@ -20,8 +28,6 @@ vite = "^6.4.1"
 typescript = "^5.3.3"
 "@types/react" = "^18.2.0"
 "@types/react-dom" = "^18.2.0"
-
-
 
 [dev-dependencies]
 watchdog = ">=3.0.0"
@@ -31,7 +37,10 @@ base_route_app = "app"
 
 [client]
 
-[byllm]
+[plugins.client.app_meta_data]
+title = "BLACKSTART"
+description = "A live model of a hospital's electrical survival. Synthetic campus data."
+theme_color = "#0b0f14"
 
 [byllm.model]
 default_model = "claude-sonnet-5"

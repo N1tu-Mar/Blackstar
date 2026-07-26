@@ -40,6 +40,17 @@ python3 scripts/fetch_basemap.py
 
 ---
 
+## Putting it on the internet
+
+BLACKSTART deploys to **JacHammer** as one application - the same
+`jac start main.jac` that runs locally, serving the API and the console from a
+single origin. No split, no separate frontend host, no compiled-in API URL.
+
+Set `ANTHROPIC_API_KEY` in the project's environment settings, run a preview to
+confirm it boots, then deploy. See **[DEPLOY.md](DEPLOY.md)**.
+
+---
+
 ## What is actually working right now
 
 | Piece | File | Status |

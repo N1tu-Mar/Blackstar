@@ -14,8 +14,11 @@ import from grid.model {
     GridNode, Substation, Generator, Battery, Facility, Conductor, IslandView
 }
 
+import from grid.campus { site_target_hours }
+
 # Diesel genset heat rate, industry rule of thumb: gallons burned per kWh.
 glob GAL_PER_KWH: float = 0.071;
+# Kept as a name for readability; the value comes from the active site file.
 glob TARGET_HOURS: float = 96.0;
 # Sentinel endurance for an island still backed by a live utility feed. On
 # utility you are not on a countdown, so the number is not meaningful.
@@ -199,7 +202,7 @@ def tier1_stranded(islands: list[IslandView]) -> bool {
         if f.tier == 1 { return True; }
     }
     for i in islands {
-        if i.tier1_present and i.endurance_hours < TARGET_HOURS { return True; }
+        if i.tier1_present and i.endurance_hours < site_target_hours() { return True; }
     }
     return False;
 }

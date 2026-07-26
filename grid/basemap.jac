@@ -19,32 +19,29 @@ import json;
 import math;
 import base64;
 import from grid.model { MapPaths }
+import from grid.campus { site_view, site_satellite_path }
 
-# The render window, deliberately tighter than the fetched extent so the
-# campus fills the frame rather than sitting in a corner of the river.
-glob VIEW_S: float = 36.84155;
-glob VIEW_N: float = 36.84815;
-glob VIEW_W: float = -76.31558;
-glob VIEW_E: float = -76.30092;
-
-# 16:9, matching the window's aspect once latitude is corrected.
-glob VIEW_W_PX: float = 1600.0;
-glob VIEW_H_PX: float = 900.0;
-
-glob LAT_SCALE: float = 0.8005;   # cos(36.845 degrees)
-
+# The render window comes from the active site file, so a different campus
+# needs no code change here.
 glob _cache: list[MapPaths] = [];
+
+
+"""One edge of the active site's render window."""
+def vw(key: str, fallback: float) -> float {
+    v: float = site_view().get(key, fallback);
+    return v;
+}
 
 
 """Project a longitude to viewBox x."""
 def bx(lon: float) -> float {
-    return ((lon - VIEW_W) / (VIEW_E - VIEW_W)) * VIEW_W_PX;
+    return ((lon - vw("west", -76.31558)) / (vw("east", -76.30092) - vw("west", -76.31558))) * vw("width_px", 1600.0);
 }
 
 
 """Project a latitude to viewBox y. North is up; SVG y grows downward."""
 def by(lat: float) -> float {
-    return ((VIEW_N - lat) / (VIEW_N - VIEW_S)) * VIEW_H_PX;
+    return ((vw("north", 36.84815) - lat) / (vw("north", 36.84815) - vw("south", 36.84155))) * vw("height_px", 900.0);
 }
 
 
@@ -53,7 +50,7 @@ def visible(ring: list[list[float]]) -> bool {
     for p in ring {
         lon = p[0];
         lat = p[1];
-        if lon >= VIEW_W and lon <= VIEW_E and lat >= VIEW_S and lat <= VIEW_N {
+        if lon >= vw("west", -76.31558) and lon <= vw("east", -76.30092) and lat >= vw("south", 36.84155) and lat <= vw("north", 36.84815) {
             return True;
         }
     }
@@ -81,7 +78,7 @@ def to_path(ring: list[list[float]], close: bool) -> str {
 def load_basemap -> MapPaths {
     if len(_cache) > 0 { return _cache[0]; }
 
-    out = MapPaths(width=VIEW_W_PX, height=VIEW_H_PX);
+    out = MapPaths(width=vw("width_px", 1600.0), height=vw("height_px", 900.0));
     try {
         with open("data/basemap.json") as fh {
             raw = json.load(fh);
@@ -96,7 +93,7 @@ def load_basemap -> MapPaths {
 
     # Inline the satellite JPEG. Read once, cached with the rest of the layer.
     try {
-        with open("data/satellite.jpg", "rb") as img {
+        with open(site_satellite_path(), "rb") as img {
             out.satellite = "data:image/jpeg;base64," + base64.b64encode(img.read()).decode("ascii");
         }
     } except Exception {

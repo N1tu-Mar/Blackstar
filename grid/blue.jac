@@ -11,7 +11,8 @@ something.
 """
 
 import from grid.model { GridNode, Facility, IslandView }
-import from grid.islands { recompute_islands, survey, TARGET_HOURS }
+import from grid.islands { recompute_islands, survey }
+import from grid.campus { site_target_hours }
 
 
 """The next load to drop on this island, or None if only tier 1 remains."""
@@ -82,9 +83,9 @@ def shed_to_target(target: float) -> tuple[list[str], bool] {
 }
 
 
-"""Run BLUE at the standard 96-hour mandate target."""
+"""Run BLUE at the active site's mandated target."""
 def run_blue -> tuple[list[str], bool] {
-    return shed_to_target(TARGET_HOURS);
+    return shed_to_target(site_target_hours());
 }
 
 

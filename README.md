@@ -86,6 +86,35 @@ If you re-run it and the arms come out level again, suspect the second failure m
 
 ---
 
+## Any grid, not just Portsmouth
+
+A site is data. The simulator contains no knowledge of any particular campus:
+islanding, endurance, BLUE, the provenance chain and RED are all site-agnostic,
+and `grid/campus.jac` is a loader rather than a fixture.
+
+```bash
+BLACKSTART_SITE=<id> jac start --dev main.jac
+```
+
+Adding a site is one JSON file plus one command:
+
+1. Write `data/sites/<id>.json` — elements, conductors, the render window, the
+   mandated endurance target, and the local flood stage.
+2. `python3 scripts/fetch_satellite.py <id>` — reads the view box out of your
+   JSON, so imagery and projection cannot drift apart.
+3. `BLACKSTART_SITE=<id> jac start --dev main.jac`.
+
+Schema and guidance on what makes a site worth simulating are in
+[`data/sites/README.md`](data/sites/README.md). The short version: the
+topology needs a redundant path, generation that is not a single point of
+failure, a spread of elevations, and roughly 20–30 elements — otherwise RED
+has nothing to discover and the memory A/B has nothing to measure.
+
+What is *not* portable is the tier assignment. Deciding that the ICU is tier 1
+and the galley is tier 3 is a judgement a facility's own engineers make, and
+it is the input the whole defence rests on. The tool computes consequences of
+that list; it does not author it.
+
 ## Design invariants
 
 Do not break these. Each one is load-bearing for the argument the project makes.

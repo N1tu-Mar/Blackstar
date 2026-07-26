@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch satellite imagery for the campus once and freeze it into the repo.
+"""Fetch satellite imagery for a site once and freeze it into the repo.
 
 Stitches Esri World Imagery tiles covering the render window, crops to the
 exact bounding box the server projects into, and writes a single JPEG. The
@@ -7,24 +7,31 @@ running app serves it as a data URI, so a demo never touches a tile server.
 
 Imagery: Esri World Imagery (Esri, Maxar, Earthstar Geographics).
 
-    python3 scripts/fetch_satellite.py
+    python3 scripts/fetch_satellite.py [site-id]
 """
 
 import io
+import json
 import math
 import pathlib
+import sys
 import time
 import urllib.request
 
 from PIL import Image
 
-# Must match grid/basemap.jac VIEW_* exactly, or the grid floats off the land.
-VIEW_S, VIEW_N = 36.84155, 36.84815
-VIEW_W, VIEW_E = -76.31558, -76.30092
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+SITE_ID = sys.argv[1] if len(sys.argv) > 1 else "nmcp-portsmouth"
+SITE = json.loads((ROOT / "data" / "sites" / f"{SITE_ID}.json").read_text())
+
+# Read straight from the site file so imagery and projection cannot drift.
+V = SITE["view"]
+VIEW_S, VIEW_N = V["south"], V["north"]
+VIEW_W, VIEW_E = V["west"], V["east"]
+OUT_W, OUT_H = int(V.get("width_px", 1600)), int(V.get("height_px", 900))
 
 ZOOM = 18
 TILE = 256
-OUT_W, OUT_H = 1600, 900
 URL = ("https://server.arcgisonline.com/ArcGIS/rest/services/"
        "World_Imagery/MapServer/tile/{z}/{y}/{x}")
 
@@ -81,7 +88,7 @@ def main() -> None:
     crop = canvas.crop((int(left), int(top), int(right), int(bottom)))
     crop = crop.resize((OUT_W, OUT_H), Image.LANCZOS)
 
-    out = pathlib.Path(__file__).resolve().parent.parent / "data" / "satellite.jpg"
+    out = ROOT / SITE.get("satellite", f"data/sites/{SITE_ID}-satellite.jpg")
     out.parent.mkdir(parents=True, exist_ok=True)
     crop.save(out, "JPEG", quality=82, optimize=True)
     print(f"\nwrote {out} ({out.stat().st_size / 1024:.0f} KB)")

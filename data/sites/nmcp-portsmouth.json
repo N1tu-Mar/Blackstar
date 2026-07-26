@@ -1,0 +1,477 @@
+{
+  "id": "nmcp-portsmouth",
+  "name": "Naval Medical Center Portsmouth",
+  "blurb": "A hospital and a DoD installation. CMS emergency preparedness and 10 U.S.C. 2925 both apply to the same building.",
+  "target_hours": 96.0,
+  "flood_stage_m": 4.0,
+  "view": {
+    "south": 36.84155,
+    "north": 36.84815,
+    "west": -76.31558,
+    "east": -76.30092,
+    "width_px": 1600.0,
+    "height_px": 900.0
+  },
+  "satellite": "data/sites/nmcp-portsmouth-satellite.jpg",
+  "elements": [
+    {
+      "name": "Elizabeth River Substation",
+      "kind": "substation",
+      "type": "Substation",
+      "lat": 36.8426,
+      "lon": -76.3045,
+      "elevation_m": 2.1,
+      "kv": 34.5,
+      "utility_source": true
+    },
+    {
+      "name": "Effingham Street Substation",
+      "kind": "substation",
+      "type": "Substation",
+      "lat": 36.8479,
+      "lon": -76.312,
+      "elevation_m": 8.4,
+      "kv": 34.5,
+      "utility_source": true
+    },
+    {
+      "name": "CEP Generator 1",
+      "kind": "generator",
+      "type": "Generator",
+      "lat": 36.84405,
+      "lon": -76.31173,
+      "elevation_m": 3.2,
+      "kw_rating": 1500.0,
+      "fuel_gal": 6000.0
+    },
+    {
+      "name": "CEP Generator 2",
+      "kind": "generator",
+      "type": "Generator",
+      "lat": 36.84373,
+      "lon": -76.31145,
+      "elevation_m": 3.2,
+      "kw_rating": 1500.0,
+      "fuel_gal": 6000.0
+    },
+    {
+      "name": "Charette Standby Generator",
+      "kind": "generator",
+      "type": "Generator",
+      "lat": 36.84629,
+      "lon": -76.30682,
+      "elevation_m": 7.1,
+      "kw_rating": 800.0,
+      "fuel_gal": 2000.0
+    },
+    {
+      "name": "Charette Critical Branch UPS",
+      "kind": "battery",
+      "type": "Battery",
+      "lat": 36.84662,
+      "lon": -76.30709,
+      "elevation_m": 7.2,
+      "kwh_stored": 900.0,
+      "kwh_capacity": 900.0,
+      "max_kw": 600.0
+    },
+    {
+      "name": "Data Center UPS",
+      "kind": "battery",
+      "type": "Battery",
+      "lat": 36.84597,
+      "lon": -76.30627,
+      "elevation_m": 7.4,
+      "kwh_stored": 400.0,
+      "kwh_capacity": 400.0,
+      "max_kw": 250.0
+    },
+    {
+      "name": "Central Energy Plant Bus",
+      "kind": "bus",
+      "type": "GridNode",
+      "lat": 36.84437,
+      "lon": -76.31105,
+      "elevation_m": 3.2
+    },
+    {
+      "name": "North Campus Switchgear",
+      "kind": "bus",
+      "type": "GridNode",
+      "lat": 36.84678,
+      "lon": -76.30859,
+      "elevation_m": 6.5
+    },
+    {
+      "name": "South Campus Switchgear",
+      "kind": "bus",
+      "type": "GridNode",
+      "lat": 36.84308,
+      "lon": -76.30955,
+      "elevation_m": 4.2
+    },
+    {
+      "name": "Charette Switchboard A",
+      "kind": "bus",
+      "type": "GridNode",
+      "lat": 36.84646,
+      "lon": -76.30764,
+      "elevation_m": 7.0
+    },
+    {
+      "name": "Charette Switchboard B",
+      "kind": "bus",
+      "type": "GridNode",
+      "lat": 36.84565,
+      "lon": -76.30723,
+      "elevation_m": 6.8
+    },
+    {
+      "name": "Intensive Care Unit",
+      "kind": "facility",
+      "type": "Facility",
+      "lat": 36.8471,
+      "lon": -76.30791,
+      "elevation_m": 7.5,
+      "tier": 1,
+      "kw": 210.0,
+      "category": "critical care"
+    },
+    {
+      "name": "Surgical Suite",
+      "kind": "facility",
+      "type": "Facility",
+      "lat": 36.84742,
+      "lon": -76.30736,
+      "elevation_m": 7.6,
+      "tier": 1,
+      "kw": 340.0,
+      "category": "operating rooms"
+    },
+    {
+      "name": "Neonatal ICU",
+      "kind": "facility",
+      "type": "Facility",
+      "lat": 36.84694,
+      "lon": -76.30695,
+      "elevation_m": 7.5,
+      "tier": 1,
+      "kw": 130.0,
+      "category": "critical care"
+    },
+    {
+      "name": "Emergency Department",
+      "kind": "facility",
+      "type": "Facility",
+      "lat": 36.84533,
+      "lon": -76.30655,
+      "elevation_m": 6.6,
+      "tier": 1,
+      "kw": 260.0,
+      "category": "emergency"
+    },
+    {
+      "name": "Network Core and Telemetry",
+      "kind": "facility",
+      "type": "Facility",
+      "lat": 36.84581,
+      "lon": -76.306,
+      "elevation_m": 7.4,
+      "tier": 1,
+      "kw": 180.0,
+      "category": "communications"
+    },
+    {
+      "name": "Fire Pump House",
+      "kind": "facility",
+      "type": "Facility",
+      "lat": 36.84341,
+      "lon": -76.31036,
+      "elevation_m": 3.9,
+      "tier": 1,
+      "kw": 95.0,
+      "category": "life safety"
+    },
+    {
+      "name": "Inpatient Tower Floor 5",
+      "kind": "facility",
+      "type": "Facility",
+      "lat": 36.84774,
+      "lon": -76.30818,
+      "elevation_m": 7.8,
+      "tier": 2,
+      "kw": 220.0,
+      "category": "inpatient ward"
+    },
+    {
+      "name": "Radiology and MRI",
+      "kind": "facility",
+      "type": "Facility",
+      "lat": 36.84501,
+      "lon": -76.30695,
+      "elevation_m": 6.4,
+      "tier": 2,
+      "kw": 290.0,
+      "category": "imaging"
+    },
+    {
+      "name": "Inpatient Pharmacy",
+      "kind": "facility",
+      "type": "Facility",
+      "lat": 36.84549,
+      "lon": -76.30777,
+      "elevation_m": 6.7,
+      "tier": 2,
+      "kw": 85.0,
+      "category": "pharmacy"
+    },
+    {
+      "name": "Clinical Laboratory",
+      "kind": "facility",
+      "type": "Facility",
+      "lat": 36.84485,
+      "lon": -76.30764,
+      "elevation_m": 6.5,
+      "tier": 2,
+      "kw": 140.0,
+      "category": "laboratory"
+    },
+    {
+      "name": "Sterile Processing",
+      "kind": "facility",
+      "type": "Facility",
+      "lat": 36.84453,
+      "lon": -76.30655,
+      "elevation_m": 6.2,
+      "tier": 2,
+      "kw": 160.0,
+      "category": "sterile processing"
+    },
+    {
+      "name": "Building One Administration",
+      "kind": "facility",
+      "type": "Facility",
+      "lat": 36.84228,
+      "lon": -76.309,
+      "elevation_m": 3.4,
+      "tier": 3,
+      "kw": 110.0,
+      "category": "administration"
+    },
+    {
+      "name": "Galley and Food Service",
+      "kind": "facility",
+      "type": "Facility",
+      "lat": 36.84276,
+      "lon": -76.30845,
+      "elevation_m": 3.8,
+      "tier": 3,
+      "kw": 175.0,
+      "category": "food service"
+    },
+    {
+      "name": "Parking Structure and Site Lighting",
+      "kind": "facility",
+      "type": "Facility",
+      "lat": 36.8418,
+      "lon": -76.30995,
+      "elevation_m": 2.8,
+      "tier": 3,
+      "kw": 65.0,
+      "category": "site services"
+    },
+    {
+      "name": "Outpatient Clinic Annex",
+      "kind": "facility",
+      "type": "Facility",
+      "lat": 36.84357,
+      "lon": -76.30873,
+      "elevation_m": 4.1,
+      "tier": 3,
+      "kw": 130.0,
+      "category": "outpatient"
+    }
+  ],
+  "conductors": [
+    {
+      "from": "Elizabeth River Substation",
+      "to": "North Campus Switchgear",
+      "label": "Elizabeth 34.5kV Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "Effingham Street Substation",
+      "to": "South Campus Switchgear",
+      "label": "Effingham 34.5kV Feeder",
+      "normally_open": false
+    },
+    {
+      "from": "CEP Generator 1",
+      "to": "Central Energy Plant Bus",
+      "label": "Gen 1 Breaker",
+      "normally_open": false
+    },
+    {
+      "from": "CEP Generator 2",
+      "to": "Central Energy Plant Bus",
+      "label": "Gen 2 Breaker",
+      "normally_open": false
+    },
+    {
+      "from": "Central Energy Plant Bus",
+      "to": "North Campus Switchgear",
+      "label": "CEP North Tie",
+      "normally_open": false
+    },
+    {
+      "from": "Central Energy Plant Bus",
+      "to": "South Campus Switchgear",
+      "label": "CEP South Tie",
+      "normally_open": false
+    },
+    {
+      "from": "CEP Generator 1",
+      "to": "North Campus Switchgear",
+      "label": "Gen 1 North Direct",
+      "normally_open": false
+    },
+    {
+      "from": "CEP Generator 2",
+      "to": "South Campus Switchgear",
+      "label": "Gen 2 South Direct",
+      "normally_open": false
+    },
+    {
+      "from": "North Campus Switchgear",
+      "to": "Charette Switchboard A",
+      "label": "North to Charette A",
+      "normally_open": false
+    },
+    {
+      "from": "North Campus Switchgear",
+      "to": "Charette Switchboard B",
+      "label": "North to Charette B",
+      "normally_open": false
+    },
+    {
+      "from": "Charette Standby Generator",
+      "to": "Charette Switchboard A",
+      "label": "Charette Standby Breaker",
+      "normally_open": false
+    },
+    {
+      "from": "Charette Critical Branch UPS",
+      "to": "Charette Switchboard A",
+      "label": "Critical Branch UPS Tie",
+      "normally_open": false
+    },
+    {
+      "from": "Data Center UPS",
+      "to": "Network Core and Telemetry",
+      "label": "Data Center UPS Tie",
+      "normally_open": false
+    },
+    {
+      "from": "Charette Switchboard A",
+      "to": "Intensive Care Unit",
+      "label": "Feeder A1",
+      "normally_open": false
+    },
+    {
+      "from": "Charette Switchboard A",
+      "to": "Surgical Suite",
+      "label": "Feeder A2",
+      "normally_open": false
+    },
+    {
+      "from": "Charette Switchboard A",
+      "to": "Neonatal ICU",
+      "label": "Feeder A3",
+      "normally_open": false
+    },
+    {
+      "from": "Charette Switchboard A",
+      "to": "Inpatient Tower Floor 5",
+      "label": "Feeder A4",
+      "normally_open": false
+    },
+    {
+      "from": "Charette Switchboard B",
+      "to": "Emergency Department",
+      "label": "Feeder B1",
+      "normally_open": false
+    },
+    {
+      "from": "Charette Switchboard B",
+      "to": "Radiology and MRI",
+      "label": "Feeder B2",
+      "normally_open": false
+    },
+    {
+      "from": "Charette Switchboard B",
+      "to": "Inpatient Pharmacy",
+      "label": "Feeder B3",
+      "normally_open": false
+    },
+    {
+      "from": "Charette Switchboard B",
+      "to": "Clinical Laboratory",
+      "label": "Feeder B4",
+      "normally_open": false
+    },
+    {
+      "from": "Charette Switchboard B",
+      "to": "Sterile Processing",
+      "label": "Feeder B5",
+      "normally_open": false
+    },
+    {
+      "from": "Charette Switchboard B",
+      "to": "Network Core and Telemetry",
+      "label": "Feeder B6",
+      "normally_open": false
+    },
+    {
+      "from": "South Campus Switchgear",
+      "to": "Building One Administration",
+      "label": "Feeder S1",
+      "normally_open": false
+    },
+    {
+      "from": "South Campus Switchgear",
+      "to": "Galley and Food Service",
+      "label": "Feeder S2",
+      "normally_open": false
+    },
+    {
+      "from": "South Campus Switchgear",
+      "to": "Parking Structure and Site Lighting",
+      "label": "Feeder S3",
+      "normally_open": false
+    },
+    {
+      "from": "South Campus Switchgear",
+      "to": "Outpatient Clinic Annex",
+      "label": "Feeder S4",
+      "normally_open": false
+    },
+    {
+      "from": "South Campus Switchgear",
+      "to": "Fire Pump House",
+      "label": "Feeder S5",
+      "normally_open": false
+    },
+    {
+      "from": "Charette Switchboard A",
+      "to": "Charette Switchboard B",
+      "label": "Charette A-B Tie",
+      "normally_open": true
+    },
+    {
+      "from": "North Campus Switchgear",
+      "to": "South Campus Switchgear",
+      "label": "North-South Campus Tie",
+      "normally_open": true
+    }
+  ]
+}

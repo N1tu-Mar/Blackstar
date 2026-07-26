@@ -21,6 +21,7 @@ import from grid.islands {
     all_elements, TARGET_HOURS, UTILITY_HOURS
 }
 import from grid.blue { run_blue, unshed_all }
+import from grid.campus { site_target_hours }
 import from grid.red { build_dashboard, redact_for_red, plan, reflect, execute, measure, resolve_target }
 import from grid.prov {
     active_run, write_tick, record_event, record_finding, record_decision,
@@ -53,8 +54,8 @@ def blue_pass(tick: Tick, islands: list[IslandView]) -> tuple[list[str], bool] {
     findings: dict[int, Finding] = {};
     for i in islands {
         findings[i.id] = record_finding(
-            tick, i.id, i.endurance_hours, TARGET_HOURS,
-            i.tier1_present and i.endurance_hours < TARGET_HOURS, i.tier1_present
+            tick, i.id, i.endurance_hours, site_target_hours(),
+            i.tier1_present and i.endurance_hours < site_target_hours(), i.tier1_present
         );
     }
 
@@ -72,7 +73,7 @@ def blue_pass(tick: Tick, islands: list[IslandView]) -> tuple[list[str], bool] {
         if cited is not None { endurance_txt = f"{(cited as Finding).endurance_hours:.1f} h"; }
         record_decision(
             tick, "shed", t.name,
-            f"tier {t.tier} load, island endurance {endurance_txt} below {TARGET_HOURS:.0f} h target",
+            f"tier {t.tier} load, island endurance {endurance_txt} below {site_target_hours():.0f} h target",
             cited, t
         );
     }

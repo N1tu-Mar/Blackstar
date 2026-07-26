@@ -39,9 +39,8 @@ import from grid.islands {
     all_elements, TARGET_HOURS, UTILITY_HOURS
 }
 import from grid.prov { record_event }
+import from grid.campus { site_name, site_flood_stage, site_target_hours }
 
-# Storm surge reaches this elevation. The flood mechanism is rejected above it.
-glob FLOOD_STAGE_M: float = 4.0;
 glob MECHANISMS: list[str] = [
     "flood", "wind", "fuel_interdiction", "cyber_switching",
     "equipment_failure", "fire"
@@ -92,7 +91,7 @@ def build_dashboard(tick: int, round_index: int, events: list[str]) -> Dashboard
 
     breach = False;
     for i in islands {
-        if i.tier1_present and i.endurance_hours < TARGET_HOURS { breach = True; }
+        if i.tier1_present and i.endurance_hours < site_target_hours() { breach = True; }
     }
 
     # An adversary escalates; it does not open with everything it has. Round 1
@@ -104,10 +103,10 @@ def build_dashboard(tick: int, round_index: int, events: list[str]) -> Dashboard
     if allowed > 4 { allowed = 4; }
 
     return Dashboard(
-        site="Naval Medical Center Portsmouth",
+        site=site_name(),
         tick=tick, round_index=round_index,
         elements=elems, islands=islands,
-        site_endurance_hours=se, target_hours=TARGET_HOURS,
+        site_endurance_hours=se, target_hours=site_target_hours(),
         strikes_allowed=allowed,
         tier1_stranded=tier1_stranded(islands), breach=breach,
         recent_events=events
@@ -357,8 +356,8 @@ def plausible(mech: str, target: GridNode) -> tuple[bool, str] {
     if mech not in MECHANISMS {
         return (False, f"unknown mechanism '{mech}'");
     }
-    if mech == "flood" and target.elevation_m > FLOOD_STAGE_M {
-        return (False, f"{target.name} sits at {target.elevation_m:.1f} m, above the {FLOOD_STAGE_M:.1f} m surge stage");
+    if mech == "flood" and target.elevation_m > site_flood_stage() {
+        return (False, f"{target.name} sits at {target.elevation_m:.1f} m, above the {site_flood_stage():.1f} m surge stage");
     }
     if mech == "fuel_interdiction" and (not isinstance(target, Generator)) {
         return (False, f"{target.name} is not a generator; there is no fuel supply to interdict");

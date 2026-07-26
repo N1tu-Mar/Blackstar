@@ -1,233 +1,168 @@
-"""BLACKSTART - Naval Medical Center Portsmouth campus fixture.
+"""BLACKSTART - the site loader.
 
-27 elements modeled on NMCP: a hospital (ICU, ORs, NICU, ED) that is also a
-DoD installation. One building, two mandates - CMS emergency preparedness and
-10 U.S.C. 2925 energy resilience reporting.
+A site is data, not code. This module builds the graph from a JSON file under
+`data/sites/`, so modelling a different hospital, base or campus means writing
+a JSON file - not touching the simulator.
 
-Topology is deliberately redundant. Bus-North is fed BOTH by the Elizabeth
-River utility substation AND by the Central Energy Plant tie. That second path
-is the thing RED does not know about in round 1 and learns in round 2.
+Nothing below knows anything about Portsmouth. The islanding walker, the
+endurance arithmetic, BLUE and the provenance chain never did; this file was
+the last place a specific site was hardcoded.
 
-Numbers are sized so the demo lands:
-  both utilities lost  -> 76.1 h  (under the 96 h target)
-  shed all tier 3      -> 93.5 h  (STILL under - the graded response)
-  shed Imaging (t2)    -> 108.3 h (clears, holds)
-  CEP tie cut first    -> critical wing isolated on one 800 kW generator,
-                          nothing left to shed, endurance breach
+Pick a site with the BLACKSTART_SITE environment variable:
+
+    BLACKSTART_SITE=nmcp-portsmouth jac start --dev main.jac
+
+See `data/sites/README.md` for the schema and how to add one.
 """
 
+import os;
+import json;
 import from grid.model {
     GridNode, Substation, Generator, Battery, Facility, Conductor, Run
 }
 
-glob TARGET_HOURS: float = 96.0;
+glob DEFAULT_SITE: str = "nmcp-portsmouth";
 glob GAL_PER_KWH: float = 0.071;
+glob _site_cache: list[dict] = [];
 
 
-"""Close a normally-closed conductor between two elements."""
-def wire(a: GridNode, b: GridNode, label: str) {
-    a +>:Conductor(label=label):+> b;
+"""Site id from the environment, or the default."""
+def site_id -> str {
+    return os.environ.get("BLACKSTART_SITE", DEFAULT_SITE);
 }
 
 
-"""A normally-open tie switch. Present in the graph but not passable."""
-def tie(a: GridNode, b: GridNode, label: str) {
-    a +>:Conductor(label=label, closed=False, passable=False, normally_open=True):+> b;
+"""Load and memoize the active site definition."""
+def site_config -> dict {
+    if len(_site_cache) > 0 { return _site_cache[0]; }
+    path = f"data/sites/{site_id()}.json";
+    with open(path) as fh {
+        cfg: dict = json.load(fh);
+    }
+    _site_cache.append(cfg);
+    return cfg;
 }
 
 
-"""Construct the NMCP campus graph and attach it to root."""
+"""Display name of the active site."""
+def site_name -> str {
+    return str(site_config().get("name", "Unnamed site"));
+}
+
+
+"""Hours of endurance the site is required to be able to demonstrate."""
+def site_target_hours -> float {
+    return float(site_config().get("target_hours", 96.0));
+}
+
+
+"""Elevation at or below which the flood mechanism is physically plausible."""
+def site_flood_stage -> float {
+    return float(site_config().get("flood_stage_m", 4.0));
+}
+
+
+"""The render window the server projects into: south, north, west, east, px."""
+def site_view -> dict {
+    return site_config().get("view", {});
+}
+
+
+"""Path to the site's satellite image, relative to the project root."""
+def site_satellite_path -> str {
+    return str(site_config().get("satellite", ""));
+}
+
+
+"""Instantiate one element from its JSON description."""
+def make_element(spec: dict) -> GridNode {
+    kind = str(spec.get("kind", "bus"));
+    name = str(spec.get("name", "unnamed"));
+    lat: float = spec.get("lat", 0.0);
+    lon: float = spec.get("lon", 0.0);
+    elev: float = spec.get("elevation_m", 5.0);
+    etype = str(spec.get("type", ""));
+
+    if etype == "Substation" {
+        return root ++> Substation(
+            name=name, kind=kind, lat=lat, lon=lon, elevation_m=elev,
+            kv=spec.get("kv", 34.5),
+            utility_source=spec.get("utility_source", False)
+        );
+    }
+    if etype == "Generator" {
+        return root ++> Generator(
+            name=name, kind=kind, lat=lat, lon=lon, elevation_m=elev,
+            kw_rating=spec.get("kw_rating", 0.0),
+            fuel_gal=spec.get("fuel_gal", 0.0)
+        );
+    }
+    if etype == "Battery" {
+        return root ++> Battery(
+            name=name, kind=kind, lat=lat, lon=lon, elevation_m=elev,
+            kwh_stored=spec.get("kwh_stored", 0.0),
+            kwh_capacity=spec.get("kwh_capacity", 0.0),
+            max_kw=spec.get("max_kw", 0.0)
+        );
+    }
+    if etype == "Facility" {
+        return root ++> Facility(
+            name=name, kind=kind, lat=lat, lon=lon, elevation_m=elev,
+            tier=spec.get("tier", 3),
+            kw=spec.get("kw", 0.0),
+            category=str(spec.get("category", "support"))
+        );
+    }
+    return root ++> GridNode(
+        name=name, kind=kind, lat=lat, lon=lon, elevation_m=elev
+    );
+}
+
+
+"""Find a previously built element by name."""
+def find_element(built: list[GridNode], name: str) -> GridNode | None {
+    for n in built {
+        if n.name == name { return n; }
+    }
+    return None;
+}
+
+
+"""Build the active site's graph and attach it to root."""
 def build_campus -> Run {
-    run = root ++> Run(site="Naval Medical Center Portsmouth", memory_enabled=True);
+    cfg = site_config();
+    run = root ++> Run(site=site_name(), memory_enabled=True);
 
-    # ---------------------------------------------------------- utility feeds
-    # Elizabeth is the river-side feed at 2.1 m elevation - the flood-exposed
-    # one. Effingham sits on higher ground at 8.4 m.
-    sub_eliz = root ++> Substation(
-        name="Elizabeth River Substation", kind="substation",
-        lat=36.8426, lon=-76.3045, elevation_m=2.1,
-        kv=34.5, utility_source=True
-    );
-    sub_effi = root ++> Substation(
-        name="Effingham Street Substation", kind="substation",
-        lat=36.8479, lon=-76.312, elevation_m=8.4,
-        kv=34.5, utility_source=True
-    );
+    built: list[GridNode] = [];
+    specs: list[dict] = cfg.get("elements", []);
+    for spec in specs { built.append(make_element(spec)); }
 
-    # ------------------------------------------------------ generation / storage
-    gen1 = root ++> Generator(
-        name="CEP Generator 1", kind="generator",
-        lat=36.84405, lon=-76.31173, elevation_m=3.2,
-        kw_rating=1500.0, fuel_gal=6000.0
-    );
-    gen2 = root ++> Generator(
-        name="CEP Generator 2", kind="generator",
-        lat=36.84373, lon=-76.31145, elevation_m=3.2,
-        kw_rating=1500.0, fuel_gal=6000.0
-    );
-    gen3 = root ++> Generator(
-        name="Charette Standby Generator", kind="generator",
-        lat=36.84629, lon=-76.30682, elevation_m=7.1,
-        kw_rating=800.0, fuel_gal=2000.0
-    );
-    ups_char = root ++> Battery(
-        name="Charette Critical Branch UPS", kind="battery",
-        lat=36.84662, lon=-76.30709, elevation_m=7.2,
-        kwh_stored=900.0, kwh_capacity=900.0, max_kw=600.0
-    );
-    ups_data = root ++> Battery(
-        name="Data Center UPS", kind="battery",
-        lat=36.84597, lon=-76.30627, elevation_m=7.4,
-        kwh_stored=400.0, kwh_capacity=400.0, max_kw=250.0
-    );
-
-    # ------------------------------------------------------------- switchgear
-    bus_cep = root ++> GridNode(
-        name="Central Energy Plant Bus", kind="bus",
-        lat=36.84437, lon=-76.31105, elevation_m=3.2
-    );
-    bus_north = root ++> GridNode(
-        name="North Campus Switchgear", kind="bus",
-        lat=36.84678, lon=-76.30859, elevation_m=6.5
-    );
-    bus_south = root ++> GridNode(
-        name="South Campus Switchgear", kind="bus",
-        lat=36.84308, lon=-76.30955, elevation_m=4.2
-    );
-    bus_ca = root ++> GridNode(
-        name="Charette Switchboard A", kind="bus",
-        lat=36.84646, lon=-76.30764, elevation_m=7.0
-    );
-    bus_cb = root ++> GridNode(
-        name="Charette Switchboard B", kind="bus",
-        lat=36.84565, lon=-76.30723, elevation_m=6.8
-    );
-
-    # ---------------------------------------------------------- tier 1 loads
-    icu = root ++> Facility(
-        name="Intensive Care Unit", kind="facility", category="critical care",
-        lat=36.8471, lon=-76.30791, elevation_m=7.5, tier=1, kw=210.0
-    );
-    surgical = root ++> Facility(
-        name="Surgical Suite", kind="facility", category="operating rooms",
-        lat=36.84742, lon=-76.30736, elevation_m=7.6, tier=1, kw=340.0
-    );
-    nicu = root ++> Facility(
-        name="Neonatal ICU", kind="facility", category="critical care",
-        lat=36.84694, lon=-76.30695, elevation_m=7.5, tier=1, kw=130.0
-    );
-    ed = root ++> Facility(
-        name="Emergency Department", kind="facility", category="emergency",
-        lat=36.84533, lon=-76.30655, elevation_m=6.6, tier=1, kw=260.0
-    );
-    datactr = root ++> Facility(
-        name="Network Core and Telemetry", kind="facility", category="communications",
-        lat=36.84581, lon=-76.306, elevation_m=7.4, tier=1, kw=180.0
-    );
-    firepump = root ++> Facility(
-        name="Fire Pump House", kind="facility", category="life safety",
-        lat=36.84341, lon=-76.31036, elevation_m=3.9, tier=1, kw=95.0
-    );
-
-    # ---------------------------------------------------------- tier 2 loads
-    tower5 = root ++> Facility(
-        name="Inpatient Tower Floor 5", kind="facility", category="inpatient ward",
-        lat=36.84774, lon=-76.30818, elevation_m=7.8, tier=2, kw=220.0
-    );
-    imaging = root ++> Facility(
-        name="Radiology and MRI", kind="facility", category="imaging",
-        lat=36.84501, lon=-76.30695, elevation_m=6.4, tier=2, kw=290.0
-    );
-    pharmacy = root ++> Facility(
-        name="Inpatient Pharmacy", kind="facility", category="pharmacy",
-        lat=36.84549, lon=-76.30777, elevation_m=6.7, tier=2, kw=85.0
-    );
-    lab = root ++> Facility(
-        name="Clinical Laboratory", kind="facility", category="laboratory",
-        lat=36.84485, lon=-76.30764, elevation_m=6.5, tier=2, kw=140.0
-    );
-    sterile = root ++> Facility(
-        name="Sterile Processing", kind="facility", category="sterile processing",
-        lat=36.84453, lon=-76.30655, elevation_m=6.2, tier=2, kw=160.0
-    );
-
-    # ---------------------------------------------------------- tier 3 loads
-    admin = root ++> Facility(
-        name="Building One Administration", kind="facility", category="administration",
-        lat=36.84228, lon=-76.309, elevation_m=3.4, tier=3, kw=110.0
-    );
-    galley = root ++> Facility(
-        name="Galley and Food Service", kind="facility", category="food service",
-        lat=36.84276, lon=-76.30845, elevation_m=3.8, tier=3, kw=175.0
-    );
-    garage = root ++> Facility(
-        name="Parking Structure and Site Lighting", kind="facility", category="site services",
-        lat=36.8418, lon=-76.30995, elevation_m=2.8, tier=3, kw=65.0
-    );
-    annex = root ++> Facility(
-        name="Outpatient Clinic Annex", kind="facility", category="outpatient",
-        lat=36.84357, lon=-76.30873, elevation_m=4.1, tier=3, kw=130.0
-    );
-
-    # ------------------------------------------------------------- conductors
-    # Utility in.
-    wire(sub_eliz, bus_north, "Elizabeth 34.5kV Feeder");
-    wire(sub_effi, bus_south, "Effingham 34.5kV Feeder");
-
-    # Generation onto the plant bus.
-    wire(gen1, bus_cep, "Gen 1 Breaker");
-    wire(gen2, bus_cep, "Gen 2 Breaker");
-
-    # THE REDUNDANT PATH. This is what RED has to discover: the plant bus can
-    # backfeed North even after the Elizabeth feeder is gone.
-    wire(bus_cep, bus_north, "CEP North Tie");
-    wire(bus_cep, bus_south, "CEP South Tie");
-
-    # Sectionalized plant bus. Each machine also has a direct breaker onto a
-    # campus bus, so losing the plant bus itself does not orphan 3000 kW of
-    # generation. Without these the plant bus is a one-strike kill, and the
-    # memory A/B saturates in round 1 with no headroom left to measure.
-    wire(gen1, bus_north, "Gen 1 North Direct");
-    wire(gen2, bus_south, "Gen 2 South Direct");
-
-    # Campus distribution.
-    wire(bus_north, bus_ca, "North to Charette A");
-    wire(bus_north, bus_cb, "North to Charette B");
-    wire(gen3, bus_ca, "Charette Standby Breaker");
-    wire(ups_char, bus_ca, "Critical Branch UPS Tie");
-    wire(ups_data, datactr, "Data Center UPS Tie");
-
-    # Charette A - the critical wing.
-    wire(bus_ca, icu, "Feeder A1");
-    wire(bus_ca, surgical, "Feeder A2");
-    wire(bus_ca, nicu, "Feeder A3");
-    wire(bus_ca, tower5, "Feeder A4");
-
-    # Charette B.
-    wire(bus_cb, ed, "Feeder B1");
-    wire(bus_cb, imaging, "Feeder B2");
-    wire(bus_cb, pharmacy, "Feeder B3");
-    wire(bus_cb, lab, "Feeder B4");
-    wire(bus_cb, sterile, "Feeder B5");
-    wire(bus_cb, datactr, "Feeder B6");
-
-    # South campus.
-    wire(bus_south, admin, "Feeder S1");
-    wire(bus_south, galley, "Feeder S2");
-    wire(bus_south, garage, "Feeder S3");
-    wire(bus_south, annex, "Feeder S4");
-    wire(bus_south, firepump, "Feeder S5");
-
-    # Normally-open ties. BLUE-2 reconfiguration may close these; nothing else
-    # touches them.
-    tie(bus_ca, bus_cb, "Charette A-B Tie");
-    tie(bus_north, bus_south, "North-South Campus Tie");
+    conductors: list[dict] = cfg.get("conductors", []);
+    for c in conductors {
+        a = find_element(built, str(c.get("from", "")));
+        b = find_element(built, str(c.get("to", "")));
+        if a is None or b is None {
+            # A conductor naming an element that does not exist is a broken
+            # site file, not a runtime condition. Skip it loudly rather than
+            # silently building a different grid than the author described.
+            print(f"BLACKSTART: conductor '{c.get('label', '?')}' names a missing element");
+            continue;
+        }
+        label = str(c.get("label", ""));
+        if c.get("normally_open", False) {
+            (a as GridNode) +>:Conductor(
+                label=label, closed=False, passable=False, normally_open=True
+            ):+> (b as GridNode);
+        } else {
+            (a as GridNode) +>:Conductor(label=label):+> (b as GridNode);
+        }
+    }
 
     return run;
 }
 
 
-"""Tear down any existing campus and rebuild a clean one."""
+"""Tear down any existing site and rebuild a clean one."""
 def reset_campus -> Run {
     for n in [root --> [?:GridNode]] { del n; }
     for r in [root --> [?:Run]] { del r; }

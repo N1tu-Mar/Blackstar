@@ -9,6 +9,10 @@ because of it.
 
 sv import from ..endpoints { RoundResult }
 
+# The calibration line below is the quiet proof. RED forecasts endurance from a
+# view with the wiring and island membership stripped out, so a near miss is
+# stronger evidence than a hit would be from an oracle: it means RED holds a
+# working model of a facility it has never been shown.
 glob RED_INK: str = "#e5484d";
 glob AMBER: str = "#b45309";
 glob INK_MUTED: str = "#737373";
@@ -37,7 +41,8 @@ def:pub RoundFeed(rounds: list[RoundResult]) -> JsxElement {
 
                     {[
                         <div key={f"{r.round_index}-{s.target_name}"} style={{"fontSize": "0.82rem", "padding": "0.1rem 0"}}>
-                            {f"-> {s.mechanism} on {s.target_name}"}
+                            {f"-> {s.mechanism} on {s.target_name}"
+                             + (" - no damage on its own" if s.immediate_damage == "none" else "")}
                         </div>
                         for s in r.strikes
                     ]}
@@ -45,6 +50,13 @@ def:pub RoundFeed(rounds: list[RoundResult]) -> JsxElement {
                     <div style={{"fontSize": "0.82rem", "marginTop": "0.5rem", "color": "#737373"}}>
                         {f"{r.outcome.endurance_before:.1f} h -> {r.outcome.endurance_after:.1f} h, split into {r.outcome.islands_formed} sections"}
                     </div>
+
+                    {[
+                        <div key={f"{r.round_index}-cal"} style={{"fontSize": "0.8rem", "color": INK_MUTED}}>
+                            {f"RED predicted {r.predicted_endurance_hours:.1f} h, measured {r.outcome.endurance_after:.1f} h (off by {r.outcome.prediction_error_hours:.1f} h)"}
+                        </div>
+                        for _c in ([0] if r.outcome.prediction_error_hours >= 0.0 else [])
+                    ]}
 
                     {[
                         <div key={f"{r.round_index}-rej-{idx}"} style={{"fontSize": "0.8rem", "color": AMBER}}>

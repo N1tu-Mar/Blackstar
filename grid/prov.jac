@@ -17,7 +17,7 @@ point of the chain being the truth.
 import from grid.model {
     Run, Round, Tick, Event, Finding, Decision, LessonNode, Facility, IslandView,
     Next, AtTick, EventAt, FindingAt, DecisionAt, Because, DerivedFrom, Caused,
-    Affected, HasRound, Learned, HasTick, HasEvent,
+    Affected, HasRound, Learned, HasTick, HasEvent, Informed,
     Explanation, ExplainLine, Lesson
 }
 
@@ -101,6 +101,48 @@ def record_lesson(rnd: Round, lesson: Lesson) -> LessonNode {
                     confidence=lesson.confidence);
     rnd +>:Learned:+> ln;
     return ln;
+}
+
+
+"""Join every lesson RED held while planning to the round it shaped.
+
+Called after the round is opened and only when memory was actually enabled, so
+the edges record what was genuinely in context rather than what merely existed.
+With memory off no edge is written, which is what makes the A/B legible on the
+graph as well as in the numbers.
+
+This is the adversary's half of invariant 5. BLUE's decisions already point at
+the Finding that justified them; RED's had no recorded cause until now.
+"""
+def link_lessons(rnd: Round) -> int {
+    run = active_run();
+    if run is None { return 0; }
+    n = 0;
+    for r in [(run as Run) ->:HasRound:->] {
+        prior = r as Round;
+        if prior.index >= rnd.index { continue; }
+        for ln in [prior ->:Learned:->] {
+            (ln as LessonNode) +>:Informed:+> rnd;
+            n += 1;
+        }
+    }
+    return n;
+}
+
+
+"""Why did RED open this round the way it did? Walk back to the sentences.
+
+Returns the revisions that were in context when the round was planned, oldest
+first. An empty list is a real answer: round 1, or memory disabled.
+"""
+def why_round(rnd: Round) -> list[str] {
+    out: list[str] = [];
+    sources = [rnd <-:Informed:<-];
+    ordered = sorted(sources, key=lambda (l: LessonNode) -> int { return l.round_index; });
+    for ln in ordered {
+        out.append(f"round {ln.round_index}: {ln.revision}");
+    }
+    return out;
 }
 
 

@@ -1,0 +1,390 @@
+"""BLACKSTART - RED, the adversary.
+
+Two LLM calls in the entire system, both here:
+
+    plan(view, lessons) -> Scenario
+    reflect(scenario, outcome) -> Lesson
+
+Look at their declarations. A signature, a `sem`, and no body. There is no
+prompt string anywhere in this project.
+
+Why PLAN needs a model: the graph knows conductors and kilowatts. It does not
+know that storm surge floods low elevation first, so the river-side substation
+and the plant fail together; that a fuel truck needs a passable road, so an
+intact generator still runs dry. That is world knowledge, absent from every
+electrical dataset, and a plausible failure *sequence* requires it.
+
+Why REFLECT is the one that matters: if round 1 hands round 2 a number, that
+is hill-climbing and needs no model. It hands over a sentence instead - "three
+islands formed, so a backup route exists that I did not account for; take it
+out first" - and there is no variable in this system that holds that. Round
+2's opening move exists because of it.
+
+RED sees `Dashboard`. Conductors are not in it.
+"""
+
+import from jaclang.byllm.lib { Model }
+import from grid.model {
+    GridNode, Substation, Generator, Battery, Facility, Conductor,
+    Dashboard, FacilityView, IslandView, Strike, Scenario, Outcome, Lesson, Event, Tick
+}
+
+# REQUIRED. The ambient `llm` sourced from jac.toml's [byllm.model]
+# default_model resolves to None in jac 0.34.5, and every `by llm()` call then
+# dies with a bare "'NoneType' object has no attribute". Declaring the model
+# explicitly here is what actually binds it.
+glob llm: Model = Model(model_name="claude-sonnet-5");
+import from grid.islands {
+    recompute_islands, survey, site_endurance, dark_facilities, tier1_stranded,
+    all_elements, TARGET_HOURS, UTILITY_HOURS
+}
+import from grid.prov { record_event }
+
+# Storm surge reaches this elevation. The flood mechanism is rejected above it.
+glob FLOOD_STAGE_M: float = 4.0;
+glob MECHANISMS: list[str] = [
+    "flood", "wind", "fuel_interdiction", "cyber_switching",
+    "equipment_failure", "fire"
+];
+
+
+# ----------------------------------------------------------------- LOOK
+
+"""What an element looks like from outside the fence."""
+def view_of(n: GridNode) -> FacilityView {
+    status = "lit";
+    if n.damaged { status = "damaged"; }
+    elif n.island_id == -1 { status = "dark"; }
+    if isinstance(n, Facility) {
+        f = n as Facility;
+        if f.shed { status = "shed"; }
+        return FacilityView(name=f.name, category=f.category, tier=f.tier,
+                            status=status, island_id=f.island_id);
+    }
+    if isinstance(n, Substation) {
+        s = n as Substation;
+        if s.utility_source and (not s.utility_live) { status = "de-energized"; }
+        return FacilityView(name=s.name, category="utility substation", tier=0,
+                            status=status, island_id=s.island_id);
+    }
+    if isinstance(n, Generator) {
+        g = n as Generator;
+        if not g.online { status = "offline"; }
+        return FacilityView(name=g.name, category="standby generator", tier=0,
+                            status=status, island_id=g.island_id);
+    }
+    if isinstance(n, Battery) {
+        return FacilityView(name=n.name, category="battery / UPS", tier=0,
+                            status=status, island_id=n.island_id);
+    }
+    return FacilityView(name=n.name, category="switchgear", tier=0,
+                        status=status, island_id=n.island_id);
+}
+
+
+"""Project the current grid state into everything RED is allowed to see."""
+def build_dashboard(tick: int, round_index: int, events: list[str]) -> Dashboard {
+    recompute_islands();
+    islands = survey();
+    se = site_endurance(islands);
+    elems: list[FacilityView] = [];
+    for n in all_elements() { elems.append(view_of(n)); }
+
+    breach = False;
+    for i in islands {
+        if i.tier1_present and i.endurance_hours < TARGET_HOURS { breach = True; }
+    }
+
+    return Dashboard(
+        site="Naval Medical Center Portsmouth",
+        tick=tick, round_index=round_index,
+        elements=elems, islands=islands,
+        site_endurance_hours=se, target_hours=TARGET_HOURS,
+        tier1_stranded=tier1_stranded(islands), breach=breach,
+        recent_events=events
+    );
+}
+
+
+# ----------------------------------------------------------------- PLAN
+
+# The LLM-facing shape is deliberately FLAT - parallel arrays instead of a
+# nested `list[Strike]`. byllm 0.34.5 cannot build an output schema for an obj
+# containing a list of objs; it dies with "'str' object has no attribute
+# 'fields'". Flat objs and list[str] fields are reliable, so RED emits those
+# and `plan` zips them back into typed Strikes below.
+obj ScenarioDraft {
+    has name: str,
+        hazard: str,
+        expected_effect: str,
+        targets: list[str],
+        mechanisms: list[str],
+        rationales: list[str];
+}
+
+sem ScenarioDraft.name = "Short operational name for this failure chain.";
+sem ScenarioDraft.hazard = "The physical hazard driving the chain, for example 'Category 2 hurricane, storm surge up the Elizabeth River'.";
+sem ScenarioDraft.expected_effect = "What you expect this to do to the facility's endurance and to its critical care areas.";
+sem ScenarioDraft.targets = "Between 2 and 4 element names to strike, in the order they fail. Each must match a name visible on the dashboard exactly.";
+sem ScenarioDraft.mechanisms = "One mechanism per target, same order and same length as targets. Each is exactly one of: flood, wind, fuel_interdiction, cyber_switching, equipment_failure, fire.";
+sem ScenarioDraft.rationales = "One sentence per target, same order and same length as targets, saying why a real hazard would cause that failure at that point in the chain.";
+
+"""Write the next failure chain a real hazard would produce at this facility.
+
+You are modeling a hazard, not choosing from a menu. You can see the buildings
+and the visible infrastructure, but you cannot see the wiring between them -
+you have to infer how this place is connected from what stayed lit and what
+went dark. Order the strikes so that earlier ones change what later ones can
+accomplish. Use the lessons to avoid repeating a move that did not work.
+"""
+def draft_scenario(view: Dashboard, lessons: list[Lesson]) -> ScenarioDraft by llm();
+
+sem draft_scenario.view = "Everything observable about the facility right now: element names, kinds, lit or dark status, which elements share an island, and hours of endurance remaining. Conductors are deliberately not shown.";
+sem draft_scenario.lessons = "What earlier rounds taught you about this facility's hidden electrical structure. Empty on the first round.";
+
+
+"""Zip RED's flat draft back into an ordered chain of typed strikes."""
+def plan(view: Dashboard, lessons: list[Lesson]) -> Scenario {
+    d = draft_scenario(view, lessons);
+    out = Scenario(name=d.name, hazard=d.hazard, expected_effect=d.expected_effect, strikes=[]);
+    for i in range(len(d.targets)) {
+        mech = d.mechanisms[i] if i < len(d.mechanisms) else "equipment_failure";
+        why = d.rationales[i] if i < len(d.rationales) else "";
+        out.strikes.append(Strike(
+            target_name=d.targets[i], mechanism=mech,
+            delay_ticks=i + 1, rationale=why
+        ));
+    }
+    return out;
+}
+
+
+# ----------------------------------------------------------------- REFLECT
+
+"""Compare what you expected against what actually happened.
+
+State the belief about this facility's wiring that you now hold and did not
+hold before. Be specific about which element to take out first next time and
+why. A number is not a lesson; a corrected topology belief is.
+"""
+# Declared locally for the same reason as ScenarioDraft: a `by llm()` return
+# type must live in the SAME module as the function. An imported obj resolves
+# to its name string in byllm's schema walker and dies with "'str' object has
+# no attribute 'fields'". `reflect` copies this into the shared model.Lesson.
+obj LessonDraft {
+    has hypothesis: str,
+        observed: str,
+        revision: str,
+        confidence: float;
+}
+
+sem LessonDraft.hypothesis = "What you believed about how this facility is wired, before this round.";
+sem LessonDraft.observed = "What actually happened that your belief did not predict.";
+sem LessonDraft.revision = "The specific corrected belief about the topology, and which element to take out first next time.";
+sem LessonDraft.confidence = "How confident you are in the revision, 0.0 to 1.0.";
+
+def reflect_on(attempt: str, result: str) -> LessonDraft by llm();
+
+sem reflect_on.attempt = "The failure chain you planned, in order, and what you expected it to achieve.";
+sem reflect_on.result = "What the grid actually did: islands formed, endurance before and after, what went dark, what the controller shed, and which of your strikes could not be resolved or were physically rejected.";
+
+
+"""Render the scenario and its outcome as prose, then reflect on the gap.
+
+Both sides are flattened to strings for the same reason `plan` emits a flat
+draft: byllm 0.34.5 cannot schema an obj carrying list-typed fields on this
+path. Prose is also simply a better prompt than a struct dump.
+"""
+def reflect(scenario: Scenario, outcome: Outcome) -> Lesson {
+    plan_lines: list[str] = [f"Scenario '{scenario.name}' - hazard: {scenario.hazard}."];
+    step = 1;
+    for s in scenario.strikes {
+        plan_lines.append(f"Step {step}: {s.mechanism} against {s.target_name}. {s.rationale}");
+        step += 1;
+    }
+    plan_lines.append(f"Expected: {scenario.expected_effect}");
+
+    res: list[str] = [
+        f"The grid broke into {outcome.islands_formed} island(s).",
+        f"Site endurance went from {outcome.endurance_before:.1f} h to {outcome.endurance_after:.1f} h against a 96 h target.",
+        f"Critical care left below target: {outcome.tier1_stranded}."
+    ];
+    if len(outcome.facilities_dark) > 0 {
+        res.append(f"Went completely dark: {', '.join(outcome.facilities_dark)}.");
+    } else {
+        res.append("Nothing lost power entirely.");
+    }
+    if len(outcome.shed_actions) > 0 {
+        res.append(f"The controller shed, in order: {', '.join(outcome.shed_actions)}.");
+    } else {
+        res.append("The controller did not need to shed anything.");
+    }
+    if len(outcome.unresolved_targets) > 0 {
+        res.append(f"These targets do not exist at this facility: {', '.join(outcome.unresolved_targets)}.");
+    }
+    if len(outcome.rejected_strikes) > 0 {
+        res.append(f"Physically rejected: {'; '.join(outcome.rejected_strikes)}.");
+    }
+
+    d = reflect_on("\n".join(plan_lines), "\n".join(res));
+    return Lesson(hypothesis=d.hypothesis, observed=d.observed,
+                  revision=d.revision, confidence=d.confidence);
+}
+
+
+# ----------------------------------------------------------------- RESOLVE
+
+"""Normalize a name for loose matching."""
+def norm(s: str) -> str {
+    out = "";
+    for ch in s.lower() {
+        if ch.isalnum() or ch == " " { out += ch; }
+        else { out += " "; }
+    }
+    return " ".join(out.split());
+}
+
+
+"""Map a natural-language target to a real element, or None on a miss.
+
+A miss is not repaired. It is recorded and fed to REFLECT, so RED learns the
+facility does not have the thing it thought it had.
+"""
+def resolve_target(name: str) -> GridNode | None {
+    want = norm(name);
+    if want == "" { return None; }
+
+    # Exact match first.
+    for n in all_elements() {
+        if norm(n.name) == want { return n; }
+    }
+
+    # Token overlap, scored, with a floor so nonsense does not resolve.
+    best: GridNode | None = None;
+    best_score = 0.0;
+    want_tokens = want.split();
+    for n in all_elements() {
+        cand = norm(n.name).split();
+        hits = 0;
+        for t in want_tokens {
+            if t in cand { hits += 1; }
+        }
+        if hits == 0 { continue; }
+        denom = float(len(want_tokens) + len(cand) - hits);
+        score = float(hits) / denom if denom > 0.0 else 0.0;
+        if score > best_score {
+            best_score = score;
+            best = n;
+        }
+    }
+    return best if best_score >= 0.34 else None;
+}
+
+
+# ----------------------------------------------------------------- GATE
+
+"""Reject strikes the physical world would not produce.
+
+Deterministic guard on model output. A rejection carries its reason, and the
+reason is fed back to REFLECT so RED learns the constraints of its own hazard
+rather than being handed them.
+"""
+def plausible(mech: str, target: GridNode) -> tuple[bool, str] {
+    if mech not in MECHANISMS {
+        return (False, f"unknown mechanism '{mech}'");
+    }
+    if mech == "flood" and target.elevation_m > FLOOD_STAGE_M {
+        return (False, f"{target.name} sits at {target.elevation_m:.1f} m, above the {FLOOD_STAGE_M:.1f} m surge stage");
+    }
+    if mech == "fuel_interdiction" and (not isinstance(target, Generator)) {
+        return (False, f"{target.name} is not a generator; there is no fuel supply to interdict");
+    }
+    return (True, "");
+}
+
+
+# ----------------------------------------------------------------- RUN
+
+"""Apply one strike to the graph. Returns (landed, detail)."""
+def apply_strike(mech: str, target: GridNode) -> tuple[bool, str] {
+    if mech == "fuel_interdiction" {
+        g = target as Generator;
+        stranded = g.fuel_gal * 0.25;
+        g.fuel_gal = stranded;
+        g.fuel_reachable = False;
+        return (True, f"road access lost; on-site fuel capped at {stranded:.0f} gal");
+    }
+
+    if mech == "cyber_switching" {
+        # Opens breakers without damaging anything - recoverable, and the way
+        # a tie gets taken out of service.
+        opened = 0;
+        for e in [edge target ->:Conductor:->] {
+            if e.closed { e.closed = False; opened += 1; }
+        }
+        for e in [edge target <-:Conductor:<-] {
+            if e.closed { e.closed = False; opened += 1; }
+        }
+        return (True, f"unauthorized switching opened {opened} breakers at {target.name}");
+    }
+
+    # flood / wind / fire / equipment_failure all physically damage the element.
+    target.damaged = True;
+    if isinstance(target, Substation) {
+        s = target as Substation;
+        if s.utility_source { s.utility_live = False; }
+    }
+    if isinstance(target, Generator) { (target as Generator).online = False; }
+    return (True, f"{target.name} damaged by {mech}");
+}
+
+
+"""Play a whole scenario against the grid, recording every event.
+
+Returns the unresolved target names and the rejected strike reasons, both of
+which become learning signal rather than errors.
+"""
+def execute(scenario: Scenario, tick: Tick) -> tuple[list[str], list[str]] {
+    unresolved: list[str] = [];
+    rejected: list[str] = [];
+    prior: Event | None = None;
+
+    for s in scenario.strikes {
+        target = resolve_target(s.target_name);
+        if target is None {
+            unresolved.append(s.target_name);
+            continue;
+        }
+        tgt = target as GridNode;
+        (ok, why) = plausible(s.mechanism, tgt);
+        if not ok {
+            rejected.append(f"{s.mechanism} on {s.target_name}: {why}");
+            continue;
+        }
+        (_landed, detail) = apply_strike(s.mechanism, tgt);
+        ev = record_event(tick, s.mechanism, tgt.name, detail, prior);
+        prior = ev;
+    }
+
+    recompute_islands();
+    return (unresolved, rejected);
+}
+
+
+"""Summarize what the scenario actually did, for REFLECT to read."""
+def measure(before: float, shed_actions: list[str], breached: bool,
+            unresolved: list[str], rejected: list[str]) -> Outcome {
+    recompute_islands();
+    islands = survey();
+    dark = [f.name for f in dark_facilities()];
+    return Outcome(
+        islands_formed=len(islands),
+        endurance_before=before,
+        endurance_after=site_endurance(islands),
+        facilities_dark=dark,
+        tier1_stranded=breached or tier1_stranded(islands),
+        shed_actions=shed_actions,
+        unresolved_targets=unresolved,
+        rejected_strikes=rejected
+    );
+}

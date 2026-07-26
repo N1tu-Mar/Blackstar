@@ -12,10 +12,11 @@ import from grid.model {
     GridNode, Substation, Generator, Battery, Facility, Conductor,
     Run, Tick, Event, Finding, Decision,
     Dashboard, MapView, MapNode, MapEdge, MapPaths, Explanation, ExplainLine,
-    Scenario, Strike, Outcome, Lesson, RoundResult, IslandView, FacilityView
+    Scenario, Strike, Outcome, Lesson, RoundResult, IslandView, FacilityView,
+    SiteSummary
 }
-import from grid.campus { build_campus, reset_campus }
-import from grid.basemap { load_basemap, bx, by }
+import from grid.campus { build_campus, reset_campus, list_sites, set_active_site }
+import from grid.basemap { load_basemap, clear_basemap_cache, bx, by }
 import from grid.islands {
     recompute_islands, survey, site_endurance, dark_facilities, tier1_stranded,
     all_elements, TARGET_HOURS, UTILITY_HOURS
@@ -167,12 +168,29 @@ walker:pub ExplainWhy {
 
 # ----------------------------------------------------------------- write API
 
+walker:pub ListSites {
+    """Every site the server can load."""
+    has reports: list[SiteSummary] = [];
+
+    can go with Root entry {
+        for s in list_sites() { report s; }
+    }
+}
+
+
 walker:pub LoadSite {
-    """Rebuild the campus from scratch and clear all history."""
+    """Rebuild from scratch and clear all history.
+
+    Pass `site_id` to switch sites; omit it to reload the current one.
+    """
     has memory_enabled: bool = True,
+        site_id: str = "",
         reports: list[Dashboard] = [];
 
     can go with Root entry {
+        if self.site_id != "" {
+            if set_active_site(self.site_id) { clear_basemap_cache(); }
+        }
         for n in [root --> [?:Tick]] { del n; }
         for n in [root --> [?:Event]] { del n; }
         for n in [root --> [?:Finding]] { del n; }

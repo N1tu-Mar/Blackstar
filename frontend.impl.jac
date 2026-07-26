@@ -27,13 +27,38 @@ impl app.refresh -> None {
             attribution = bp.attribution;
         }
     }
+    sres = root spawn ListSites();
+    sites = sres.reports;
+    # Track the server's active site rather than whatever the <select> happens
+    # to show first, or the picker lies about what is loaded.
+    active_id = "";
+    for s in sres.reports {
+        if s.active { active_id = s.id; }
+    }
+    if active_id != "" { site_id = active_id; }
     lres = root spawn GetLessons();
     lessons = lres.reports;
 }
 
+
+impl app.onPickSite(e: ChangeEvent) -> None {
+    chosen = e.target.value;
+    site_id = chosen;
+    busy = True;
+    status = "Loading site...";
+    _ = root spawn LoadSite(memory_enabled=True, site_id=chosen);
+    explain_lines = [];
+    rounds = [];
+    # The satellite backdrop belongs to the old site; force a refetch.
+    satellite = "";
+    await refresh();
+    status = "";
+    busy = False;
+}
+
 impl app.onLoadSite -> None {
     busy = True;
-    status = "Rebuilding the campus...";
+    status = "Resetting...";
     _ = root spawn LoadSite(memory_enabled=True);
     explain_lines = [];
     rounds = [];
@@ -44,26 +69,26 @@ impl app.onLoadSite -> None {
 
 impl app.onCutRiver -> None {
     busy = True;
-    status = "Opening the Elizabeth River feeder...";
+    status = "Opening one incoming power line...";
     _ = root spawn CutConductor(label="Elizabeth 34.5kV Feeder");
     await refresh();
-    status = "River feeder open. Still lit - a second path is carrying the campus.";
+    status = "Still lit. A second path is carrying the site.";
     busy = False;
 }
 
 impl app.onCutBoth -> None {
     busy = True;
-    status = "Opening both utility feeders...";
+    status = "Cutting all incoming grid power...";
     _ = root spawn CutConductor(label="Elizabeth 34.5kV Feeder");
     _ = root spawn CutConductor(label="Effingham 34.5kV Feeder");
     await refresh();
-    status = "Both utility feeds gone. The campus is on its own generation.";
+    status = "Grid power gone. The site is running on its own generators.";
     busy = False;
 }
 
 impl app.onRunBlue -> None {
     busy = True;
-    status = "Running the controller...";
+    status = "Shedding non-critical loads...";
     _ = root spawn RunBlue();
     await refresh();
     status = "";
@@ -72,7 +97,7 @@ impl app.onRunBlue -> None {
 
 impl app.onRunRound -> None {
     busy = True;
-    status = "RED is planning. This takes a moment - two model calls.";
+    status = "Planning a disaster. This takes a moment.";
     rres = root spawn RunRound();
     if rres.reports {
         rounds = rounds + [rres.reports[0]];

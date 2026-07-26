@@ -92,11 +92,18 @@ A site is data. The simulator contains no knowledge of any particular campus:
 islanding, endurance, BLUE, the provenance chain and RED are all site-agnostic,
 and `grid/campus.jac` is a loader rather than a fixture.
 
+Switch sites from the picker at the top of the console, or pin one at boot:
+
 ```bash
 BLACKSTART_SITE=<id> jac start --dev main.jac
 ```
 
-Adding a site is one JSON file plus one command:
+Two ship with the repo — **Naval Medical Center Portsmouth** (coastal, storm
+surge) and **Walter Reed, Bethesda** (inland, creek and stormwater flooding,
+its own flood stage in local elevation terms). Each has its own graded
+cascade: Portsmouth 76.1 → 108.3 h, Walter Reed 74.1 → 91.2 → 106.3 h.
+
+Adding a third is one JSON file plus one command:
 
 1. Write `data/sites/<id>.json` — elements, conductors, the render window, the
    mandated endurance target, and the local flood stage.

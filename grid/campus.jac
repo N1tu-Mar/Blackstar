@@ -18,17 +18,57 @@ See `data/sites/README.md` for the schema and how to add one.
 import os;
 import json;
 import from grid.model {
-    GridNode, Substation, Generator, Battery, Facility, Conductor, Run
+    GridNode, Substation, Generator, Battery, Facility, Conductor, Run, SiteSummary
 }
 
 glob DEFAULT_SITE: str = "nmcp-portsmouth";
 glob GAL_PER_KWH: float = 0.071;
+glob SITE_DIR: str = "data/sites";
 glob _site_cache: list[dict] = [];
+# Set from the UI. Falls back to the environment, then the default.
+glob _active: list[str] = [];
 
 
-"""Site id from the environment, or the default."""
+"""Active site id: UI selection, else environment, else the default."""
 def site_id -> str {
+    if len(_active) > 0 { return _active[0]; }
     return os.environ.get("BLACKSTART_SITE", DEFAULT_SITE);
+}
+
+
+"""Switch sites at run time. Returns False if the id has no site file."""
+def set_active_site(sid: str) -> bool {
+    if not os.path.exists(f"{SITE_DIR}/{sid}.json") { return False; }
+    _active.clear();
+    _active.append(sid);
+    _site_cache.clear();
+    return True;
+}
+
+
+"""Every site the server can load, newest selection first."""
+def list_sites -> list[SiteSummary] {
+    out: list[SiteSummary] = [];
+    current = site_id();
+    names: list[str] = sorted(os.listdir(SITE_DIR));
+    for fname in names {
+        if not fname.endswith(".json") { continue; }
+        sid = fname[0:len(fname) - 5];
+        try {
+            with open(f"{SITE_DIR}/{fname}") as fh {
+                cfg: dict = json.load(fh);
+            }
+        } except Exception { continue; }
+        elems: list[dict] = cfg.get("elements", []);
+        out.append(SiteSummary(
+            id=sid,
+            name=str(cfg.get("name", sid)),
+            blurb=str(cfg.get("blurb", "")),
+            elements=len(elems),
+            active=(sid == current)
+        ));
+    }
+    return out;
 }
 
 

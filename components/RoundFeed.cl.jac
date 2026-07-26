@@ -17,7 +17,7 @@ glob INK_MUTED: str = "#737373";
 def:pub RoundFeed(rounds: list[RoundResult]) -> JsxElement {
     if len(rounds) == 0 {
         return <div style={{"color": INK_MUTED, "fontSize": "0.85rem"}}>
-            No rounds yet. Run a RED round.
+            Nothing simulated yet.
         </div>;
     }
 
@@ -29,7 +29,7 @@ def:pub RoundFeed(rounds: list[RoundResult]) -> JsxElement {
                     "paddingLeft": "0.9rem", "marginBottom": "1.5rem"
                 }}>
                     <div style={{"fontSize": "0.9rem", "fontWeight": "600", "color": RED_INK}}>
-                        {f"round {r.round_index} - {r.scenario_name}"}
+                        {f"{r.round_index}. {r.scenario_name}"}
                     </div>
                     <div style={{"fontSize": "0.82rem", "color": INK_MUTED, "marginBottom": "0.5rem"}}>
                         {r.hazard}
@@ -43,7 +43,7 @@ def:pub RoundFeed(rounds: list[RoundResult]) -> JsxElement {
                     ]}
 
                     <div style={{"fontSize": "0.82rem", "marginTop": "0.5rem", "color": "#737373"}}>
-                        {f"endurance {r.outcome.endurance_before:.1f} h -> {r.outcome.endurance_after:.1f} h, {r.outcome.islands_formed} islands"}
+                        {f"{r.outcome.endurance_before:.1f} h -> {r.outcome.endurance_after:.1f} h, split into {r.outcome.islands_formed} sections"}
                     </div>
 
                     {[
@@ -55,7 +55,7 @@ def:pub RoundFeed(rounds: list[RoundResult]) -> JsxElement {
 
                     {[
                         <div key={f"{r.round_index}-shed-{idx}"} style={{"fontSize": "0.8rem", "color": AMBER}}>
-                            {f"BLUE shed: {name}"}
+                            {f"Shed: {name}"}
                         </div>
                         for (idx, name) in enumerate(r.outcome.shed_actions)
                     ]}

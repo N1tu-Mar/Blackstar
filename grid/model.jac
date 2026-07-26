@@ -211,6 +211,15 @@ obj MapView {
         edges: list[MapEdge] = [];
 }
 
+# One selectable site, for the picker.
+obj SiteSummary {
+    has id: str,
+        name: str,
+        blurb: str = "",
+        elements: int = 0,
+        active: bool = False;
+}
+
 obj ExplainLine {
     has ref: str,
         text: str;

@@ -11,8 +11,8 @@ import from .components.RoundFeed { RoundFeed }
 
 sv import from endpoints {
     Dashboard, FacilityView, IslandView, Explanation, ExplainLine, Lesson,
-    MapView, MapNode, MapEdge, RoundResult,
-    GetDashboard, GetMap, GetBasemap, LoadSite, CutConductor,
+    MapView, MapNode, MapEdge, RoundResult, SiteSummary,
+    GetDashboard, GetMap, GetBasemap, LoadSite, ListSites, CutConductor,
     RunBlue, RunRound, GetLessons, ExplainWhy
 }
 
@@ -29,6 +29,8 @@ def:pub app -> JsxElement {
         lessons: list[Lesson] = [],
         explain_lines: list[ExplainLine] = [],
         rounds: list[RoundResult] = [],
+        sites: list[SiteSummary] = [],
+        site_id: str = "",
         site: str = "",
         endurance: float = 0.0,
         target: float = 96.0,
@@ -42,6 +44,7 @@ def:pub app -> JsxElement {
 
     async def refresh -> None;
     async def onLoadSite -> None;
+    async def onPickSite(e: ChangeEvent) -> None;
     async def onCutRiver -> None;
     async def onCutBoth -> None;
     async def onRunBlue -> None;
@@ -64,9 +67,28 @@ def:pub app -> JsxElement {
                 }}>
                     Blackstart
                 </h1>
-                <p style={{"color": "#737373", "fontSize": "0.95rem", "margin": "0.4rem 0 2.5rem"}}>
-                    {site if site else "Loading..."}
-                </p>
+                <div style={{
+                    "display": "flex", "alignItems": "center", "gap": "0.6rem",
+                    "margin": "0.5rem 0 2.5rem"
+                }}>
+                    <select
+                        value={site_id}
+                        onChange={onPickSite}
+                        style={{
+                            "padding": "0.4rem 0.6rem", "border": "1px solid #e5e5e5",
+                            "borderRadius": "8px", "fontFamily": "inherit",
+                            "fontSize": "0.9rem", "color": "#0a0a0a", "background": "#ffffff"
+                        }}
+                    >
+                        {[
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                            for s in sites
+                        ]}
+                    </select>
+                    <span style={{"color": "#737373", "fontSize": "0.9rem"}}>
+                        {f"{len(elements)} elements"}
+                    </span>
+                </div>
 
                 <div style={{"display": "flex", "gap": "3.5rem", "marginBottom": "2rem"}}>
                     <div>
@@ -94,17 +116,17 @@ def:pub app -> JsxElement {
                             {len(islands)}
                         </div>
                         <div style={{"fontSize": "0.8rem", "color": "#737373", "marginTop": "0.5rem"}}>
-                            Separate islands
+                            Separately powered sections
                         </div>
                     </div>
                 </div>
 
                 <div style={{"display": "flex", "gap": "0.5rem", "flexWrap": "wrap", "marginBottom": "0.75rem"}}>
                     <button onClick={onLoadSite} disabled={busy} style={BTN}>Reset</button>
-                    <button onClick={onCutRiver} disabled={busy} style={BTN}>Cut river feeder</button>
-                    <button onClick={onCutBoth} disabled={busy} style={BTN}>Cut both feeders</button>
-                    <button onClick={onRunBlue} disabled={busy} style={BTN}>Run BLUE</button>
-                    <button onClick={onRunRound} disabled={busy} style={BTN_PRIMARY}>Run RED round</button>
+                    <button onClick={onCutRiver} disabled={busy} style={BTN}>Cut one power line</button>
+                    <button onClick={onCutBoth} disabled={busy} style={BTN}>Cut all grid power</button>
+                    <button onClick={onRunBlue} disabled={busy} style={BTN}>Protect critical care</button>
+                    <button onClick={onRunRound} disabled={busy} style={BTN_PRIMARY}>Simulate a disaster</button>
                 </div>
 
                 <p style={{"color": "#737373", "fontSize": "0.85rem", "minHeight": "1.4rem", "margin": "0 0 1.25rem"}}>
@@ -146,22 +168,22 @@ def:pub app -> JsxElement {
                             for (idx, line) in enumerate(explain_lines)
                         ]}
 
-                        <h2 style={H2}>Islands</h2>
+                        <h2 style={H2}>Powered sections</h2>
                         {[
                             <div key={str(i.id)} style={{"fontSize": "0.85rem", "padding": "0.3rem 0"}}>
-                                {f"Island {i.id} - {i.endurance_hours:.1f} h, {i.served_kw:.0f} kW"}
+                                {f"Section {i.id} - {i.endurance_hours:.1f} h left, {i.served_kw:.0f} kW load"}
                             </div>
                             for i in islands
                         ]}
                     </div>
 
                     <div>
-                        <h2 style={H2}>RED rounds</h2>
+                        <h2 style={H2}>Disasters simulated</h2>
                         <RoundFeed rounds={rounds}/>
                     </div>
                 </div>
 
-                <h2 style={H2}>Elements</h2>
+                <h2 style={H2}>Everything on site</h2>
                 <div style={{"columns": "2", "columnGap": "3rem"}}>
                     {[
                         <ElementRow key={e.name} name={e.name} category={e.category}
@@ -170,7 +192,7 @@ def:pub app -> JsxElement {
                     ]}
                 </div>
 
-                <h2 style={H2}>Event log</h2>
+                <h2 style={H2}>What has happened</h2>
                 {[
                     <div key={str(idx)} style={{
                         "fontSize": "0.8rem", "color": "#737373", "padding": "0.2rem 0"

@@ -26,6 +26,12 @@ import from grid.campus { site_view, site_satellite_path }
 glob _cache: list[MapPaths] = [];
 
 
+"""Drop the memoized layer so the next read reflects a new site."""
+def clear_basemap_cache {
+    _cache.clear();
+}
+
+
 """One edge of the active site's render window."""
 def vw(key: str, fallback: float) -> float {
     v: float = site_view().get(key, fallback);
@@ -79,42 +85,19 @@ def load_basemap -> MapPaths {
     if len(_cache) > 0 { return _cache[0]; }
 
     out = MapPaths(width=vw("width_px", 1600.0), height=vw("height_px", 900.0));
-    try {
-        with open("data/basemap.json") as fh {
-            raw = json.load(fh);
-        }
-    } except Exception {
-        # A missing basemap degrades to a plain background, never a crash.
-        _cache.append(out);
-        return out;
-    }
+    out.attribution = "Imagery (c) Esri, Maxar, Earthstar Geographics";
 
-    out.attribution = "Imagery (c) Esri, Maxar, Earthstar Geographics - Map data (c) OpenStreetMap contributors";
-
-    # Inline the satellite JPEG. Read once, cached with the rest of the layer.
+    # The satellite image is the whole basemap. Load it first and on its own:
+    # an earlier version read an optional OSM vector file before this and
+    # returned early when that file was absent, which silently produced a
+    # backdrop-less map with no error anywhere.
     try {
         with open(site_satellite_path(), "rb") as img {
             out.satellite = "data:image/jpeg;base64," + base64.b64encode(img.read()).decode("ascii");
         }
     } except Exception {
+        print(f"BLACKSTART: no satellite image at '{site_satellite_path()}' - run scripts/fetch_satellite.py");
         out.satellite = "";
-    }
-
-    water: list[list[list[float]]] = raw.get("water", []);
-    for ring in water {
-        if visible(ring) { out.water.append(to_path(ring, True)); }
-    }
-    bldgs: list[list[list[float]]] = raw.get("buildings", []);
-    for ring in bldgs {
-        if visible(ring) { out.buildings.append(to_path(ring, True)); }
-    }
-    major: list[list[list[float]]] = raw.get("roads_major", []);
-    for ring in major {
-        if visible(ring) { out.roads_major.append(to_path(ring, False)); }
-    }
-    minor: list[list[list[float]]] = raw.get("roads_minor", []);
-    for ring in minor {
-        if visible(ring) { out.roads_minor.append(to_path(ring, False)); }
     }
 
     _cache.append(out);

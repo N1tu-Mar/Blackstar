@@ -16,6 +16,7 @@ import from grid.model {
     SiteSummary, HardeningPlan, Vulnerability
 }
 import from grid.advisor { hardening_plan }
+import from grid.restore { restore_pass, stranded_critical, escalate }
 import from grid.campus { build_campus, reset_campus, list_sites, set_active_site }
 import from grid.basemap { load_basemap, clear_basemap_cache, bx, by }
 import from grid.islands {
@@ -275,7 +276,15 @@ walker:pub RunBlue {
         recompute_islands();
         islands = survey();
         tick = write_tick(run, run.tick, site_endurance(islands), len(islands), 0.0);
-        blue_pass(tick, islands);
+
+        # HEAL, then shed. Restoration runs first because shedding around a
+        # facility that could simply be reconnected is the wrong answer - and
+        # once a tie is closed the endurance BLUE is deciding against has
+        # changed, so the survey has to be retaken before it runs.
+        _ = restore_pass(tick);
+        recompute_islands();
+        blue_pass(tick, survey());
+
         report build_dashboard(run.tick, run.round_index, recent_event_text(12));
     }
 }
@@ -313,9 +322,14 @@ walker:pub RunRound {
         tick = write_tick(run, run.tick, before, len(before_dash.islands), 0.0);
         (unresolved, rejected) = execute(scenario, tick, rnd);
 
+        # HEAL, then shed - same ordering as RunBlue. RED cuts a path; the
+        # defender tries to switch around the cut before it starts turning
+        # buildings off. Restoration is what makes a second round interesting:
+        # RED has to take out the alternate route too, not just the main one.
         recompute_islands();
-        islands = survey();
-        (actions, breached) = blue_pass(tick, islands);
+        restoration = restore_pass(tick);
+        recompute_islands();
+        (actions, breached) = blue_pass(tick, survey());
 
         recompute_islands();
         after_islands = survey();

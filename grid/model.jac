@@ -294,6 +294,40 @@ obj Lesson {
         confidence: float = 0.5;
 }
 
+# ------------------------------------------------- restoration (rerouting)
+
+obj RestorePath {
+    """One multi-hop route back to power, through tie switches.
+
+    `hops` is the number of switching operations an operator would perform.
+    Fewer is strictly better under storm conditions, which is why the search
+    is breadth-first over hop count rather than a scored search.
+    """
+
+    has facility: str = "",
+        found: bool = False,
+        hops: int = 0,
+        tie_labels: list[str] = [];
+}
+
+obj RestoreResult {
+    has considered: list[str] = [],
+        restored: list[str] = [],
+        already_restored: list[str] = [],
+        infeasible: list[str] = [],
+        unreachable: list[str] = [],
+        paths: list[RestorePath] = [];
+}
+
+obj EscalationAdvice {
+    has assessment: str = "",
+        options: list[str] = [],
+        rationales: list[str] = [],
+        first_action: str = "",
+        authored_by: str = "";
+}
+
+
 # ------------------------------------------------- the defensive synthesis
 
 obj Vulnerability {

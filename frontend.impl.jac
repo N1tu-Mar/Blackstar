@@ -25,6 +25,7 @@ impl app.onLoadSite -> None {
     status = "rebuilding campus...";
     _ = root spawn LoadSite(memory_enabled=True);
     explain_lines = [];
+    rounds = [];
     await refresh();
     status = "";
     busy = False;
@@ -42,7 +43,10 @@ impl app.onRunBlue -> None {
 impl app.onRunRound -> None {
     busy = True;
     status = "RED is planning, this takes a moment...";
-    _ = root spawn RunRound();
+    rres = root spawn RunRound();
+    if rres.reports {
+        rounds = rounds + [rres.reports[0]];
+    }
     await refresh();
     status = "";
     busy = False;

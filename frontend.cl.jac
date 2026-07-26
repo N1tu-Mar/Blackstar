@@ -8,10 +8,11 @@ lesson feed are the next pieces - see README, "Who builds what".
 
 import from .components.ElementRow { ElementRow }
 import from .components.GridMap { GridMap }
+import from .components.RoundFeed { RoundFeed }
 
 sv import from endpoints {
     Dashboard, FacilityView, IslandView, Explanation, ExplainLine, Lesson,
-    MapView, MapNode, MapEdge,
+    MapView, MapNode, MapEdge, RoundResult,
     GetDashboard, GetMap, LoadSite, RunBlue, RunRound, GetLessons, ExplainWhy
 }
 
@@ -23,6 +24,7 @@ def:pub app -> JsxElement {
         events: list[str] = [],
         lessons: list[Lesson] = [],
         explain_lines: list[ExplainLine] = [],
+        rounds: list[RoundResult] = [],
         site: str = "loading...",
         endurance: float = 0.0,
         target: float = 96.0,
@@ -102,16 +104,8 @@ def:pub app -> JsxElement {
                         for i in islands
                     ]}
 
-                    <h2 style={H2}>RED lessons</h2>
-                    {[
-                        <div key={str(idx)} style={{
-                            "fontSize": "0.78rem", "marginBottom": "0.6rem",
-                            "borderLeft": "2px solid #f0a020", "paddingLeft": "0.6rem"
-                        }}>
-                            {l.revision}
-                        </div>
-                        for (idx, l) in enumerate(lessons)
-                    ]}
+                    <h2 style={H2}>RED rounds</h2>
+                    <RoundFeed rounds={rounds}/>
 
                     <h2 style={H2}>Why did it go dark?</h2>
                     <div style={{"display": "flex", "gap": "0.4rem"}}>

@@ -17,6 +17,8 @@ set -a && . ./.env && set +a
 jac start --dev main.jac
 ```
 
+> **Do not run a script and the dev server at the same time.** They share `.jac/data`, and both will be writing the same graph.
+
 > **The `set -a && . ./.env` step is not optional.** `.env` autoload is unreliable in this Jac build; without it every `by llm()` call dies with a bare `AuthenticationError`.
 
 Type-check everything with `jac check .` before you push.
@@ -25,7 +27,8 @@ Two runnable scripts prove the system without the UI:
 
 ```bash
 jac run scripts/demo.jac      # the pitch demo: cuts, shedding, "why did the Galley go dark"
-jac run scripts/redloop.jac   # two full RED rounds with memory (~90 s, makes 4 LLM calls)
+jac run scripts/redloop.jac   # two full RED rounds with memory (~90 s, 4 LLM calls)
+jac run scripts/ab.jac        # the A/B: memory on vs off, 3 rounds each (~3 min, 12 LLM calls)
 ```
 
 ---
@@ -137,9 +140,8 @@ Each of these is one file, so nobody blocks anybody.
 |---|---|---|
 | — | **Map polish**: labels still collide in the dense Charette cluster. Needs real collision avoidance or leader lines. | `components/GridMap.cl.jac` |
 | — | **Endurance gauge**: the headline number against the 96 h line, colored on crossing. | `components/EnduranceGauge.cl.jac` |
-| — | **A/B harness**: two runs, `memory_enabled` true vs false, 3 rounds each, side-by-side endurance counters. `LoadSite` already takes the flag. | new `ab.jac` |
 | — | **BLUE-2 reconfiguration** (stretch): greedy tie-switch closure search maximizing tier-1 kW × endurance. Spec in `TECH_SPEC.md` §7.2. Two `TieSwitch` conductors already exist in the campus. | `grid/blue.jac` |
-| — | **Round history panel**: `RunRound` already returns a full `RoundResult` with strikes, outcome and lesson. | `components/RoundFeed.cl.jac` |
+| — | **Endurance gauge**: the headline number is plain text today. Wants a real gauge against the 96 h line, colour crossing the threshold. | `components/EnduranceGauge.cl.jac` |
 
 Full design rationale, demo script, dataset notes and the business framing are in **`TECH_SPEC.md`**.
 

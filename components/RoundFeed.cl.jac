@@ -7,7 +7,7 @@ variable in the system that holds it, and the next round's opening move exists
 because of it.
 """
 
-import from grid.model { RoundResult }
+sv import from ..endpoints { RoundResult }
 
 glob RED_INK: str = "#e66767";
 glob AMBER: str = "#c98500";

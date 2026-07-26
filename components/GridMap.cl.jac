@@ -19,7 +19,7 @@ compilation intact and silently yield NaN coordinates, which React renders as
 an empty SVG with only a console warning.
 """
 
-import from grid.model { MapNode, MapEdge }
+sv import from ..endpoints { MapNode, MapEdge }
 
 glob ISLAND_HUES: list[str] = ["#3987e5", "#d95926", "#199e70"];
 glob NEUTRAL: str = "#6b7280";

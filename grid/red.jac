@@ -23,7 +23,7 @@ out first" - and there is no variable in this system that holds that. Round
 RED sees `Dashboard`. Conductors are not in it.
 """
 
-import from jaclang.byllm.lib { Model }
+import from byllm.lib { Model }
 import from grid.model {
     GridNode, Substation, Generator, Battery, Facility, Conductor,
     Dashboard, FacilityView, IslandView, Strike, Scenario, Outcome, Lesson, Event, Tick

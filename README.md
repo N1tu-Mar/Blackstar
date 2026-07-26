@@ -8,13 +8,83 @@ The campus is a graph. When elements fail it fractures into electrical islands, 
 
 ---
 
-## Quickstart
+## Run it in the browser
+
+Everything you need is a shell, Python 3.11+, and an Anthropic key. Node is not
+required — `jac` vendors its own `bun` under `.jac/bin`.
 
 ```bash
-cp .env.example .env        # add your ANTHROPIC_API_KEY
-jac install
-set -a && . ./.env && set +a
+cp .env.example .env             # put a real ANTHROPIC_API_KEY in it
+jac install                      # python deps -> .jac/venv, client deps via bun
+set -a && . ./.env && set +a     # not optional, see below
 jac start --dev main.jac
+```
+
+Then open **<http://localhost:8000/>**.
+
+### Two ports, and this is the part people get wrong
+
+`--dev` runs the client and the server **separately**:
+
+| URL | What it is |
+|---|---|
+| `http://localhost:8000/` | the operator console — Vite dev server, hot-reloads `.cl.jac` files |
+| `http://localhost:8001/` | the walker API — `POST /walker/<Name>` |
+
+Without `--dev` you get a single port serving a production client bundle and the
+API together, and no hot reload. Use `--dev` while building; it is the only mode
+where editing `frontend.cl.jac` shows up without a restart. **Server-side changes
+(`endpoints.sv.jac`, anything under `grid/`) still need a restart in both modes.**
+
+**Read the startup banner for the actual port.** If 8000 is taken, `jac` does not
+fail — it quietly picks another and prints `Port 8000 is in use, using port 8002
+instead`. That is where the stray `:8002` in old notes came from. To pin them:
+
+```bash
+jac start --dev main.jac -p 3000 -a 3001   # -p app port, -a API port
+```
+
+### What to click, in this order
+
+| Control | What happens | LLM call? |
+|---|---|---|
+| **Load site** | rebuilds the 27-element campus, clears all history | no |
+| **Run BLUE** | one deterministic shedding pass, no adversary | no |
+| **Run RED round** | LOOK → PLAN → RUN → REFLECT; buttons disable while it runs (~40–60 s) | yes, 2 |
+| **Explain** | type a facility name (`Galley and Food Service`) for the cited backward chain | no |
+
+Only **Run RED round** needs the API key. The map, the endurance number, BLUE and
+the explain chain all work with no key at all.
+
+### Poking the API without the UI
+
+Walker fields are top-level JSON, and `GET /walker/<Name>` prints the field schema:
+
+```bash
+curl -s localhost:8001/walkers
+curl -s localhost:8001/walker/CutConductor                    # field schema
+curl -s -X POST localhost:8001/walker/GetDashboard  -H 'content-type: application/json' -d '{}'
+curl -s -X POST localhost:8001/walker/CutConductor  -H 'content-type: application/json' -d '{"label":"CEP Tie A"}'
+```
+
+### QA the running UI headlessly
+
+```bash
+jac browse open http://localhost:8000/   # the scheme is required, or you land on about:blank
+jac browse snapshot                      # accessibility tree with @e1-style refs
+jac browse console                       # check this FIRST when the page looks wrong
+jac browse screenshot
+jac browse close
+```
+
+### Stopping it
+
+`Ctrl-C` in the server terminal. If the process is killed rather than interrupted,
+the Vite (`node`) and API (`python`) children can survive and keep holding the
+ports — which is what the "port is in use" message is usually telling you:
+
+```bash
+lsof -nP -iTCP:8000 -sTCP:LISTEN     # then kill the pid
 ```
 
 > **Do not run a script and the dev server at the same time.** They share `.jac/data`, and both will be writing the same graph.
@@ -23,13 +93,48 @@ jac start --dev main.jac
 
 Type-check everything with `jac check .` before you push.
 
-Two runnable scripts prove the system without the UI:
+### Without the browser
+
+Three runnable scripts prove the system with no UI at all:
 
 ```bash
 jac run scripts/demo.jac      # the pitch demo: cuts, shedding, "why did the Galley go dark"
 jac run scripts/redloop.jac   # two full RED rounds with memory (~90 s, 4 LLM calls)
 jac run scripts/ab.jac        # the A/B: memory on vs off, 3 rounds each (~3 min, 12 LLM calls)
 ```
+
+### When the page is blank
+
+| Symptom | Cause |
+|---|---|
+| Vite error overlay, `Failed to resolve import "./grid/model.js"` | client code is importing server-side types — see *Toolchain drift* below |
+| Blank page, console `does not provide an export named 'MapEdge'` | same cause |
+| Empty SVG, console `Received NaN for the ... attribute` | `dict.get()` / `min()` / `max()` in a `.cl.jac` file — they compile to JS and yield `NaN` |
+| `No module named 'jaclang.byllm'` at startup | see *Toolchain drift* below |
+| Bare `AuthenticationError` from a RED round | you skipped `set -a && . ./.env && set +a` |
+| UI stale after an edit | `rm -rf .jac/cache` and restart — **not** `jac clean --all` |
+
+### Toolchain drift — read this before debugging anything else
+
+This repo was written against jac **0.34.5**. Checked out fresh on 2026-07-26 the
+bundled `.venv` carries **jaclang 0.16.7 / byllm 0.6.19**, and against that build
+the app **does not come up in a browser**. Three separate breaks, all verified:
+
+1. **The server will not boot.** `grid/red.jac:26` imports `jaclang.byllm.lib`;
+   byllm 0.6.19 exposes it as `byllm.lib`. One-line import change.
+2. **The console renders blank.** `components/GridMap.cl.jac` and
+   `components/RoundFeed.cl.jac` import `MapNode` / `MapEdge` / `RoundResult`
+   from `grid.model`, and the compiled `/compiled/grid/model.js` does not export
+   them. Dev mode shows a Vite overlay; a non-dev build fails outright. The shared
+   view objects need to be reachable from client code, not just server code.
+   Rewriting the import as `..grid.model` is *not* enough — that was tried.
+3. **`POST /walker/LoadSite` 500s** with `'list' object has no attribute
+   'memory_enabled'`: `build_campus` does `run = root ++> Run(...)`, which is a
+   `list` on this build. Every other walker — `GetDashboard`, `GetMap`, `RunBlue`,
+   `GetLessons`, `ExplainWhy`, `CutConductor` — answers correctly.
+
+None of this is fixed in the tree. If the console comes up blank for you, you are
+seeing (2), not something you broke.
 
 ---
 
@@ -44,7 +149,7 @@ jac run scripts/ab.jac        # the A/B: memory on vs off, 3 rounds each (~3 min
 | Provenance archive + backward `explain` | `grid/prov.jac` | ✅ verified, cited chain walks to root cause |
 | RED adversary (`plan` / `reflect`) | `grid/red.jac` | ✅ verified live, both calls, with memory |
 | Public walker API | `endpoints.sv.jac` | ✅ verified via `scripts/demo.jac` |
-| Operator console + campus map | `frontend.cl.jac`, `components/GridMap.cl.jac` | ✅ verified in-browser; islands split visually |
+| Operator console + campus map | `frontend.cl.jac`, `components/GridMap.cl.jac` | ⚠️ verified in-browser on jac 0.34.5; blank on the currently bundled 0.16.7 — see *Toolchain drift* |
 
 **The simulation core is verified end to end.** This cascade was produced by an actual run, not by hand:
 
@@ -128,7 +233,7 @@ This build differs sharply from the `jaclang` Python package most docs describe.
 **Client code (compiles to JavaScript)**
 
 - **`dict.get()`, `min()` and `max()` do not survive compilation to JS.** They yield `NaN` silently — React then renders an empty SVG and only warns in the console. `components/GridMap.cl.jac` uses explicit loops instead. If a chart renders blank, check the browser console for `Received NaN for the ... attribute` before anything else.
-- QA the running UI with `jac browse open http://localhost:8002/` → `snapshot` / `console` / `screenshot`. The URL needs its scheme or it navigates to `about:blank`.
+- QA the running UI with `jac browse open http://localhost:8000/` → `snapshot` / `console` / `screenshot`. The URL needs its scheme or it navigates to `about:blank`, and the port is whatever the startup banner printed — not necessarily 8000.
 
 ---
 
@@ -139,9 +244,8 @@ Each of these is one file, so nobody blocks anybody.
 | Owner | Task | File |
 |---|---|---|
 | — | **Map polish**: labels still collide in the dense Charette cluster. Needs real collision avoidance or leader lines. | `components/GridMap.cl.jac` |
-| — | **Endurance gauge**: the headline number against the 96 h line, colored on crossing. | `components/EnduranceGauge.cl.jac` |
+| — | **Endurance gauge**: the headline number is plain text today. Wants a real gauge against the 96 h line, coloured on crossing the threshold. | `components/EnduranceGauge.cl.jac` |
 | — | **BLUE-2 reconfiguration** (stretch): greedy tie-switch closure search maximizing tier-1 kW × endurance. Spec in `TECH_SPEC.md` §7.2. Two `TieSwitch` conductors already exist in the campus. | `grid/blue.jac` |
-| — | **Endurance gauge**: the headline number is plain text today. Wants a real gauge against the 96 h line, colour crossing the threshold. | `components/EnduranceGauge.cl.jac` |
 
 Full design rationale, demo script, dataset notes and the business framing are in **`TECH_SPEC.md`**.
 

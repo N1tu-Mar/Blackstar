@@ -41,7 +41,7 @@ jac run scripts/redloop.jac   # two full RED rounds with memory (~90 s, makes 4 
 | Provenance archive + backward `explain` | `grid/prov.jac` | ✅ verified, cited chain walks to root cause |
 | RED adversary (`plan` / `reflect`) | `grid/red.jac` | ✅ verified live, both calls, with memory |
 | Public walker API | `endpoints.sv.jac` | ✅ verified via `scripts/demo.jac` |
-| Operator console | `frontend.cl.jac` | ⚠️ minimal — proves the round trip, needs the map |
+| Operator console + campus map | `frontend.cl.jac`, `components/GridMap.cl.jac` | ✅ verified in-browser; islands split visually |
 
 **The simulation core is verified end to end.** This cascade was produced by an actual run, not by hand:
 
@@ -122,6 +122,11 @@ This build differs sharply from the `jaclang` Python package most docs describe.
 - `jac clean --all` removes the venv and does **not** reliably restore the byLLM capability afterward. Prefer `rm -rf .jac/cache`.
 - Iterating a list of function references segfaults the runtime. Call them individually.
 
+**Client code (compiles to JavaScript)**
+
+- **`dict.get()`, `min()` and `max()` do not survive compilation to JS.** They yield `NaN` silently — React then renders an empty SVG and only warns in the console. `components/GridMap.cl.jac` uses explicit loops instead. If a chart renders blank, check the browser console for `Received NaN for the ... attribute` before anything else.
+- QA the running UI with `jac browse open http://localhost:8002/` → `snapshot` / `console` / `screenshot`. The URL needs its scheme or it navigates to `about:blank`.
+
 ---
 
 ## Who builds what
@@ -130,7 +135,7 @@ Each of these is one file, so nobody blocks anybody.
 
 | Owner | Task | File |
 |---|---|---|
-| — | **Campus map**: SVG, lat/lon projected, colored by `island_id`, dashed red for damaged conductors. `GetMap` already returns everything you need. | `components/GridMap.cl.jac` |
+| — | **Map polish**: labels still collide in the dense Charette cluster. Needs real collision avoidance or leader lines. | `components/GridMap.cl.jac` |
 | — | **Endurance gauge**: the headline number against the 96 h line, colored on crossing. | `components/EnduranceGauge.cl.jac` |
 | — | **A/B harness**: two runs, `memory_enabled` true vs false, 3 rounds each, side-by-side endurance counters. `LoadSite` already takes the flag. | new `ab.jac` |
 | — | **BLUE-2 reconfiguration** (stretch): greedy tie-switch closure search maximizing tier-1 kW × endurance. Spec in `TECH_SPEC.md` §7.2. Two `TieSwitch` conductors already exist in the campus. | `grid/blue.jac` |

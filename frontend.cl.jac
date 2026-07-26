@@ -7,14 +7,18 @@ lesson feed are the next pieces - see README, "Who builds what".
 """
 
 import from .components.ElementRow { ElementRow }
+import from .components.GridMap { GridMap }
 
 sv import from endpoints {
     Dashboard, FacilityView, IslandView, Explanation, ExplainLine, Lesson,
-    GetDashboard, LoadSite, RunBlue, RunRound, GetLessons, ExplainWhy
+    MapView, MapNode, MapEdge,
+    GetDashboard, GetMap, LoadSite, RunBlue, RunRound, GetLessons, ExplainWhy
 }
 
 def:pub app -> JsxElement {
     has elements: list[FacilityView] = [],
+        map_nodes: list[MapNode] = [],
+        map_edges: list[MapEdge] = [],
         islands: list[IslandView] = [],
         events: list[str] = [],
         lessons: list[Lesson] = [],
@@ -74,6 +78,10 @@ def:pub app -> JsxElement {
             </div>
 
             <p style={{"color": "#f0a020", "fontSize": "0.8rem"}}>{status}</p>
+
+            <div style={{"border": "1px solid #2a2f3a", "padding": "0.5rem", "marginBottom": "1.2rem"}}>
+                <GridMap nodes={map_nodes} edges={map_edges} width={1240.0} height={560.0}/>
+            </div>
 
             <div style={{"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "2rem"}}>
                 <div>

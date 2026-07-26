@@ -11,6 +11,11 @@ impl app.refresh -> None {
         endurance = d.site_endurance_hours;
         target = d.target_hours;
     }
+    mres = root spawn GetMap();
+    if mres.reports {
+        map_nodes = mres.reports[0].nodes;
+        map_edges = mres.reports[0].edges;
+    }
     lres = root spawn GetLessons();
     lessons = lres.reports;
 }

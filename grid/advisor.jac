@@ -35,6 +35,7 @@ The invariant that no model touches the load-shedding decision is untouched.
 # import. Same fix as grid/red.jac - this file arrived by a parallel branch and
 # missed it, which took the whole server down because endpoints.sv.jac imports
 # `hardening_plan` from here at module load.
+import os;
 import from byllm.lib { Model }
 import from grid.model {
     Run, Round, Event, LessonNode, GridNode, Facility, Substation, Generator,
@@ -46,7 +47,9 @@ import from grid.prov { active_run, all_lessons }
 
 # Same reason as grid/red.jac: the ambient model from jac.toml resolves to None
 # and every call dies without a stack. Declare it explicitly.
-glob llm: Model = Model(model_name="claude-sonnet-5");
+glob llm: Model = Model(
+    model_name=os.environ.get("BLACKSTART_MODEL", "claude-sonnet-5")
+);
 
 # How many vulnerabilities to carry into the recommendation. Beyond about four
 # the advice stops being a priority list and starts being a wish list.

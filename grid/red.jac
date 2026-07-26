@@ -25,6 +25,7 @@ RED sees `Dashboard`. Conductors are not in it.
 
 # byllm 0.6.19 exposes this as `byllm.lib`; the `jaclang.byllm.lib` path only
 # exists on older builds and dies here with a bare ModuleNotFoundError at import.
+import os;
 import from byllm.lib { Model }
 import from grid.model {
     GridNode, Substation, Generator, Battery, Facility, Conductor,
@@ -33,10 +34,17 @@ import from grid.model {
 }
 
 # REQUIRED. The ambient `llm` sourced from jac.toml's [byllm.model]
-# default_model resolves to None in jac 0.34.5, and every `by llm()` call then
-# dies with a bare "'NoneType' object has no attribute". Declaring the model
-# explicitly here is what actually binds it.
-glob llm: Model = Model(model_name="claude-sonnet-5");
+# default_model resolves to None, and every `by llm()` call then dies with a
+# bare "'NoneType' object has no attribute". Declaring the model explicitly is
+# what actually binds it.
+#
+# Read from the environment, same idiom as BLACKSTART_SITE in campus.jac, so
+# the provider is a deploy-time choice rather than three hardcoded strings.
+# Anthropic is the default and needs ANTHROPIC_API_KEY; to run on Gemini
+# instead, set BLACKSTART_MODEL=gemini/gemini-2.5-flash and GEMINI_API_KEY.
+glob llm: Model = Model(
+    model_name=os.environ.get("BLACKSTART_MODEL", "claude-sonnet-5")
+);
 import from grid.islands {
     recompute_islands, survey, site_endurance, dark_facilities, tier1_stranded,
     all_elements, TARGET_HOURS, UTILITY_HOURS

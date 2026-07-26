@@ -37,6 +37,7 @@ has provably run out - which is the only place it can add something the
 arithmetic could not.
 """
 
+import os;
 import from byllm.lib { Model }
 import from grid.model {
     GridNode, Substation, Generator, Battery, Facility, Conductor,
@@ -46,7 +47,9 @@ import from grid.islands { recompute_islands, survey, all_elements, endurance_of
 import from grid.campus { site_target_hours }
 import from grid.prov { record_event, record_finding, record_decision }
 
-glob llm: Model = Model(model_name="claude-sonnet-5");
+glob llm: Model = Model(
+    model_name=os.environ.get("BLACKSTART_MODEL", "claude-sonnet-5")
+);
 
 # How many ties deep to search. Two is enough for any real campus - a path
 # needing three switching operations is not something an operator executes

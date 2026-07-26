@@ -123,39 +123,45 @@ def make_element(spec: dict) -> GridNode {
     elev: float = spec.get("elevation_m", 5.0);
     etype = str(spec.get("type", ""));
 
+    # Every return here indexes the connect. `++>` evaluates to a LIST of the
+    # nodes it connected, so a bare `return root ++> X(...)` hands back
+    # [GridNode] while claiming -> GridNode. Nothing catches it at the boundary;
+    # it surfaces later as `'list' object has no attribute 'name'` inside
+    # find_element, several frames from the cause. Same defect that was fixed
+    # for `Run` on the line below.
     if etype == "Substation" {
-        return root ++> Substation(
+        return (root ++> Substation(
             name=name, kind=kind, lat=lat, lon=lon, elevation_m=elev,
             kv=spec.get("kv", 34.5),
             utility_source=spec.get("utility_source", False)
-        );
+        ))[0];
     }
     if etype == "Generator" {
-        return root ++> Generator(
+        return (root ++> Generator(
             name=name, kind=kind, lat=lat, lon=lon, elevation_m=elev,
             kw_rating=spec.get("kw_rating", 0.0),
             fuel_gal=spec.get("fuel_gal", 0.0)
-        );
+        ))[0];
     }
     if etype == "Battery" {
-        return root ++> Battery(
+        return (root ++> Battery(
             name=name, kind=kind, lat=lat, lon=lon, elevation_m=elev,
             kwh_stored=spec.get("kwh_stored", 0.0),
             kwh_capacity=spec.get("kwh_capacity", 0.0),
             max_kw=spec.get("max_kw", 0.0)
-        );
+        ))[0];
     }
     if etype == "Facility" {
-        return root ++> Facility(
+        return (root ++> Facility(
             name=name, kind=kind, lat=lat, lon=lon, elevation_m=elev,
             tier=spec.get("tier", 3),
             kw=spec.get("kw", 0.0),
             category=str(spec.get("category", "support"))
-        );
+        ))[0];
     }
-    return root ++> GridNode(
+    return (root ++> GridNode(
         name=name, kind=kind, lat=lat, lon=lon, elevation_m=elev
-    );
+    ))[0];
 }
 
 

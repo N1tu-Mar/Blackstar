@@ -1,0 +1,837 @@
+<title>BLACKSTART — which wing stays alive at 2 AM</title>
+
+<style>
+  :root {
+    --paper:    #F1F4F5;
+    --paper-2:  #E7ECEE;
+    --rule:     #C3CED2;
+    --ink:      #0E161B;
+    --ink-2:    #47565E;
+    --ink-3:    #78878E;
+    --live:     #0F7A9D;
+    --live-dim: #9FC4D2;
+    --warn:     #9A6B00;
+    --dark:     #A81E2D;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --sheet: 1160px;
+    --col: 660px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper:    #0B1114;
+      --paper-2:  #121B1F;
+      --rule:     #27373D;
+      --ink:      #E6EDEF;
+      --ink-2:    #9DAEB4;
+      --ink-3:    #6E8087;
+      --live:     #4EB8DC;
+      --live-dim: #1E4657;
+      --warn:     #D9A227;
+      --dark:     #E46B6B;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:    #0B1114;
+    --paper-2:  #121B1F;
+    --rule:     #27373D;
+    --ink:      #E6EDEF;
+    --ink-2:    #9DAEB4;
+    --ink-3:    #6E8087;
+    --live:     #4EB8DC;
+    --live-dim: #1E4657;
+    --warn:     #D9A227;
+    --dark:     #E46B6B;
+  }
+  :root[data-theme="light"] {
+    --paper:    #F1F4F5;
+    --paper-2:  #E7ECEE;
+    --rule:     #C3CED2;
+    --ink:      #0E161B;
+    --ink-2:    #47565E;
+    --ink-3:    #78878E;
+    --live:     #0F7A9D;
+    --live-dim: #9FC4D2;
+    --warn:     #9A6B00;
+    --dark:     #A81E2D;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .sheet { max-width: var(--sheet); margin: 0 auto; padding: 0 28px; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0;
+  }
+
+  h1, h2, h3 { font-family: var(--mono); font-weight: 600; text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(30px, 5.1vw, 58px); line-height: 1.02; letter-spacing: -0.025em; }
+  h2 { font-size: clamp(21px, 2.5vw, 27px); line-height: 1.15; letter-spacing: -0.015em; }
+  h3 { font-size: 15px; letter-spacing: 0.01em; }
+
+  p { margin: 0; max-width: var(--col); }
+  a { color: var(--live); text-decoration: none; border-bottom: 1px solid var(--live-dim); }
+  a:hover { border-bottom-color: var(--live); }
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--live); outline-offset: 3px; border-radius: 2px;
+  }
+
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  /* ---------- masthead ---------- */
+  .mast {
+    border-bottom: 1px solid var(--rule);
+    padding: 22px 0 18px;
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 20px; flex-wrap: wrap;
+  }
+  .wordmark { font-family: var(--mono); font-size: 15px; font-weight: 600; letter-spacing: 0.2em; }
+  .titleblock {
+    font-family: var(--mono); font-size: 11px; color: var(--ink-3);
+    display: flex; gap: 22px; flex-wrap: wrap; letter-spacing: 0.05em;
+  }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 58px 0 20px; display: grid; gap: 30px; grid-template-columns: minmax(0,1fr) minmax(0,1.08fr); align-items: start; }
+  @media (max-width: 940px) { .hero { grid-template-columns: 1fr; padding-top: 40px; } }
+  .lede { font-size: 19px; color: var(--ink-2); margin-top: 20px; }
+  .kicker { color: var(--live); }
+
+  /* ---------- the live one-line ---------- */
+  .panel {
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    padding: 16px 18px 14px;
+  }
+  .panel-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 14px; border-bottom: 1px solid var(--rule); padding-bottom: 10px; margin-bottom: 12px;
+  }
+  .readout { display: flex; gap: 26px; align-items: flex-end; flex-wrap: wrap; }
+  .readout-item { display: flex; flex-direction: column; gap: 3px; }
+  .readout-val { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 30px; line-height: 1; letter-spacing: -0.02em; }
+  .readout-lab { font-family: var(--mono); font-size: 10px; letter-spacing: 0.11em; text-transform: uppercase; color: var(--ink-3); }
+  .st-live { color: var(--live); }
+  .st-warn { color: var(--warn); }
+  .st-dark { color: var(--dark); }
+
+  svg.oneline { width: 100%; height: auto; display: block; margin: 4px 0 2px; }
+  .n-box { fill: var(--paper); stroke: var(--live); stroke-width: 1.4; transition: stroke .35s, fill .35s, opacity .35s; }
+  .n-box.off { stroke: var(--dark); opacity: .5; }
+  .n-box.shed { stroke: var(--warn); stroke-dasharray: 3 2.5; }
+  .n-lab { font-family: var(--mono); font-size: 8.4px; fill: var(--ink-2); letter-spacing: .02em; }
+  .cbl { stroke: var(--live); stroke-width: 1.5; transition: stroke .35s, opacity .35s; }
+  .cbl.cut { stroke: var(--dark); stroke-dasharray: 4 3; opacity: .55; }
+  .isl-tag { font-family: var(--mono); font-size: 8px; fill: var(--ink-3); letter-spacing: .1em; }
+
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  button {
+    font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.05em;
+    background: var(--paper); color: var(--ink);
+    border: 1px solid var(--rule); padding: 8px 13px; cursor: pointer;
+    transition: border-color .18s, color .18s;
+  }
+  button:hover:not(:disabled) { border-color: var(--live); color: var(--live); }
+  button:disabled { opacity: .38; cursor: default; }
+  button.primary { border-color: var(--live); color: var(--live); }
+  .trace {
+    font-family: var(--mono); font-size: 11.5px; color: var(--ink-2);
+    border-top: 1px solid var(--rule); margin-top: 12px; padding-top: 10px;
+    min-height: 3.4em; line-height: 1.5;
+  }
+
+  /* ---------- structure ---------- */
+  section { padding: 56px 0; border-top: 1px solid var(--rule); }
+  .sec-head { display: flex; gap: 16px; align-items: baseline; margin-bottom: 26px; }
+  .sec-mark { font-family: var(--mono); font-size: 11px; color: var(--ink-3); letter-spacing: .1em; padding-top: 5px; white-space: nowrap; }
+  .two { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 34px; }
+  @media (max-width: 860px) { .two { grid-template-columns: 1fr; gap: 26px; } }
+  .stack { display: flex; flex-direction: column; gap: 15px; }
+
+  .rail { border-left: 2px solid var(--live); padding-left: 16px; }
+  .quiet { color: var(--ink-2); }
+  .tiny { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); line-height: 1.55; }
+
+  /* ---------- data table ---------- */
+  .tw { overflow-x: auto; border: 1px solid var(--rule); }
+  table { border-collapse: collapse; width: 100%; font-family: var(--mono); font-size: 12.5px; }
+  th, td { text-align: left; padding: 9px 13px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+  th { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  td.n { font-variant-numeric: tabular-nums; text-align: right; }
+  tr:last-child td { border-bottom: none; }
+
+  /* ---------- metric strip ---------- */
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+  .metric { background: var(--paper); padding: 15px 16px; display: flex; flex-direction: column; gap: 5px; }
+  .metric b { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 23px; font-weight: 600; letter-spacing: -.02em; }
+
+  /* ---------- code ---------- */
+  pre {
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.62;
+    background: var(--paper-2); border: 1px solid var(--rule);
+    padding: 14px 16px; overflow-x: auto; margin: 0;
+  }
+  .cm { color: var(--ink-3); }
+  .kw { color: var(--live); }
+
+  /* ---------- cta ---------- */
+  .cta { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+  .btn-lg {
+    font-family: var(--mono); font-size: 13px; letter-spacing: .06em;
+    padding: 14px 22px; border: 1px solid var(--live); color: var(--paper);
+    background: var(--live); text-decoration: none; display: inline-block;
+  }
+  .btn-lg:hover { opacity: .88; border-bottom-color: var(--live); }
+  .btn-gh {
+    font-family: var(--mono); font-size: 13px; letter-spacing: .06em;
+    padding: 14px 22px; border: 1px solid var(--rule); color: var(--ink);
+    background: transparent; text-decoration: none; display: inline-block;
+  }
+  .btn-gh:hover { border-color: var(--live); color: var(--live); border-bottom-color: var(--live); }
+
+  footer { border-top: 1px solid var(--rule); padding: 26px 0 60px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+
+<div class="sheet">
+
+  <div class="mast">
+    <div class="wordmark">BLACKSTART</div>
+    <div class="titleblock">
+      <span>NAVAL MEDICAL CENTER PORTSMOUTH</span>
+      <span>27 ELEMENTS / 30 CONDUCTORS</span>
+      <span>TARGET 96 H</span>
+    </div>
+  </div>
+
+  <!-- ================= HERO ================= -->
+  <div class="hero">
+    <div>
+      <p class="eyebrow">A hospital that is also a military installation</p>
+      <h1>Which wing stays<br />alive at 2&nbsp;AM<span class="kicker">?</span></h1>
+      <p class="lede">
+        Every hospital has backup power. None of it is enough for the whole building,
+        so something gets turned off. That decision is a priority list an engineer
+        wrote when the building opened — and afterward, nobody can explain it.
+      </p>
+      <p class="lede" style="margin-top:14px">
+        We made the electrical campus a graph you can attack, defend, and
+        <em>interrogate</em>. Cut a feeder on the right and watch it break apart.
+      </p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h3 style="margin:0">Live one-line — Portsmouth, essential branch</h3>
+        <span class="tiny" id="stage">healthy</span>
+      </div>
+
+      <div class="readout">
+        <div class="readout-item">
+          <span class="readout-val st-live" id="hours">GRID</span>
+          <span class="readout-lab">hours of power left</span>
+        </div>
+        <div class="readout-item">
+          <span class="readout-val" id="islands">1</span>
+          <span class="readout-lab">separate sections</span>
+        </div>
+        <div class="readout-item">
+          <span class="readout-val" id="shedn">0</span>
+          <span class="readout-lab">loads curtailed</span>
+        </div>
+      </div>
+
+      <svg class="oneline" viewBox="0 0 560 232" role="img"
+           aria-label="Single-line diagram: two utility substations feed north and south campus switchgear, which feed the Charette switchboards and the critical loads, with two generators and a UPS on the essential branch.">
+        <g id="cables" stroke-linecap="square"></g>
+        <g id="nodes"></g>
+      </svg>
+
+      <div class="controls">
+        <button id="b1" class="primary">Cut the river feeder</button>
+        <button id="b2">Cut the second feeder</button>
+        <button id="b3">Run the controller</button>
+        <button id="b4">Reset</button>
+      </div>
+      <div class="trace" id="trace">Both utility feeds are up. One section, grid-backed, nothing curtailed.</div>
+    </div>
+  </div>
+
+  <!-- ================= PROBLEM ================= -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-mark">THE PROBLEM</span>
+      <h2>Two federal mandates ask the same question. Both are answered by hand, weeks late.</h2>
+    </div>
+
+    <div class="two">
+      <div class="stack">
+        <p>
+          Naval Medical Center Portsmouth is a hospital — intensive care, operating
+          rooms, ventilators. It is also a Department of Defense installation. One
+          building, two legal obligations, and both of them turn on a single number:
+          how long can this place run without the grid?
+        </p>
+        <p>
+          Today an engineer answers it by reading SCADA logs after the fact. When
+          someone asks why the third floor went dark at 2:03, the honest answer is
+          three weeks of archaeology and an educated guess.
+        </p>
+        <div class="rail">
+          <p class="tiny" style="max-width:none">
+            96 hours is not a number we chose. It is the self-sustainment window
+            hospitals are expected to plan for — power, water, fuel, staffing —
+            without outside help.
+          </p>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="tw">
+          <table>
+            <thead>
+              <tr><th>Who</th><th>Obligation</th><th>Today</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Installation</td>
+                <td>10 U.S.C. §2925</td>
+                <td>by hand, annually</td>
+              </tr>
+              <tr>
+                <td>Hospital</td>
+                <td>42 CFR 482.15</td>
+                <td>consultants</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="tiny" style="max-width:none">
+          §2925 wants outage duration, mission impact, and the load the installation
+          would curtail to survive. The CMS emergency-preparedness rule wants a plan
+          that is documented, tested, and reviewed. Neither is a dashboard. Both are
+          a <em>filing</em> — recurring, budgeted, and mandatory.
+        </p>
+        <p>
+          That is the wedge. Infrastructure software gets bought when it produces a
+          document someone is already legally required to produce.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SOLUTION ================= -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-mark">HOW IT WORKS</span>
+      <h2>The graph is the program. The model is the weather.</h2>
+    </div>
+
+    <div class="two">
+      <div class="stack">
+        <h3>Islanding nobody wrote</h3>
+        <p>
+          Buildings, substations, generators and switchboards are graph nodes.
+          Conductors are edges carrying one flag: <span class="num">passable</span>.
+          A walker crossing the campus is filtered to passable conductors, so a
+          de-energized cable is not an edge it declines to take — it is an edge it
+          <em>cannot see</em>.
+        </p>
+        <p>
+          There is no connected-components routine anywhere in the repository. Open a
+          breaker and the campus fractures because traversal changed. That is the
+          whole mechanism.
+        </p>
+        <pre><span class="cm"># the only islanding logic that exists</span>
+<span class="kw">visit</span> [-&gt;:Conductor:passable == <span class="kw">True</span>:-&gt;];
+<span class="kw">visit</span> [&lt;-:Conductor:passable == <span class="kw">True</span>:&lt;-];</pre>
+      </div>
+
+      <div class="stack">
+        <h3>Two model calls, and nowhere else</h3>
+        <p>
+          The adversary plans a failure chain, then writes down what it learned. Both
+          are functions with a signature and <em>no body</em>. There is no prompt
+          string in this project.
+        </p>
+        <pre><span class="kw">def</span> draft_scenario(view: Dashboard,
+                   lessons: list[Lesson])
+    -&gt; ScenarioDraft <span class="kw">by llm</span>();
+
+<span class="kw">def</span> reflect_on(attempt: str, result: str)
+    -&gt; LessonDraft <span class="kw">by llm</span>();</pre>
+        <p>
+          The graph knows kilowatts. It does not know that storm surge floods low
+          ground first, or that a fuel truck needs a passable road — so an intact
+          generator still runs dry. That is world knowledge, absent from every
+          electrical dataset, and writing a plausible failure <em>sequence</em>
+          requires it.
+        </p>
+      </div>
+    </div>
+
+    <div class="two" style="margin-top:34px">
+      <div class="stack">
+        <h3>Memory is what makes it an agent</h3>
+        <p>
+          If round one hands round two a number, that is hill-climbing and needs no
+          model. It hands over a sentence instead — a corrected belief about wiring
+          it was never shown — and round two's opening move exists because of it.
+        </p>
+        <p class="tiny" style="max-width:none">
+          Measured across three rounds, twice: remembering, the adversary stranded
+          critical care a full round earlier and held the site 44 hours lower.
+        </p>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Adversary</th><th class="n">R1</th><th class="n">R2</th><th class="n">R3</th><th class="n">Held</th><th>First kill</th></tr></thead>
+            <tbody>
+              <tr><td>with memory</td><td class="n">100.6</td><td class="n st-dark">0.0</td><td class="n">0.0</td><td class="n">100.6</td><td class="st-dark">round 2</td></tr>
+              <tr><td>blind</td><td class="n">100.6</td><td class="n">44.0</td><td class="n">0.0</td><td class="n">144.6</td><td>round 3</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="stack">
+        <h3>Where the model is deliberately absent</h3>
+        <p>
+          Nobody accredits a language model to de-energize an intensive care unit.
+          Curtailment is a sorted list and a while loop: highest tier first, largest
+          load first within a tier, tier one never. If shedding runs out before the
+          target is met, it reports a breach rather than touching tier one.
+        </p>
+        <p>
+          It sounds like a weakness. It is the sentence that makes the rest of the
+          system trustworthy — the intelligence sits on the threat, because you
+          cannot script what goes wrong.
+        </p>
+        <div class="rail">
+          <p class="quiet" style="max-width:none">
+            And because every decision is a graph node with edges to its evidence,
+            the filing writes itself. Each line cites the archive node it came from.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= EVIDENCE ================= -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-mark">MEASURED</span>
+      <h2>Every number here came out of a run, not a slide.</h2>
+    </div>
+
+    <div class="metrics">
+      <div class="metric"><b class="st-warn">76.1<span style="font-size:14px"> h</span></b><span class="readout-lab">both feeds lost</span></div>
+      <div class="metric"><b class="st-live">108.3<span style="font-size:14px"> h</span></b><span class="readout-lab">after curtailment</span></div>
+      <div class="metric"><b>770<span style="font-size:14px"> kW</span></b><span class="readout-lab">shed of 2,590</span></div>
+      <div class="metric"><b class="st-dark">4</b><span class="readout-lab">single-strike kills found</span></div>
+      <div class="metric"><b>928</b><span class="readout-lab">futures simulated, undone</span></div>
+      <div class="metric"><b>86.9<span style="font-size:14px">%</span></b><span class="readout-lab">of the code is Jac</span></div>
+    </div>
+
+    <div class="two" style="margin-top:30px">
+      <div class="stack">
+        <h3>We measured what the model is worth</h3>
+        <p>
+          The fair challenge to any LLM in a loop is: would a search do this better?
+          So we built the search. It gets the same failure mechanisms and the same
+          plausibility gate, plus two things the adversary never gets — the complete
+          element list, and unlimited rehearsals.
+        </p>
+        <p>
+          That makes it an upper bound on achievable damage, not a realistic
+          attacker. The useful number is how close the adversary gets to that bound
+          while planning from names and status alone.
+        </p>
+        <p class="tiny" style="max-width:none">
+          It also cannot say <em>why</em>. It emits <span class="num">flood:X → fuel:Y</span>
+          and nothing else — no hazard, no account of itself. You cannot brief it,
+          and you cannot file it.
+        </p>
+      </div>
+
+      <div class="stack">
+        <h3>Then it found what the exercise missed</h3>
+        <p>
+          A red-team transcript can only implicate what the adversary chose to hit.
+          Searching everything exposes the gap — and on this campus four switchboards
+          each strand critical care on a <em>single</em> strike, none of which the
+          adversary ever tried.
+        </p>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Element</th><th>Mechanism</th><th class="n">Left</th><th>Tested?</th></tr></thead>
+            <tbody>
+              <tr><td>Charette Switchboard A</td><td>wind</td><td class="n st-dark">0.0 h</td><td class="st-dark">never</td></tr>
+              <tr><td>Charette Switchboard B</td><td>wind</td><td class="n st-dark">0.0 h</td><td class="st-dark">never</td></tr>
+              <tr><td>North Campus Switchgear</td><td>wind</td><td class="n st-dark">0.0 h</td><td class="st-dark">never</td></tr>
+              <tr><td>South Campus Switchgear</td><td>wind</td><td class="n st-dark">0.0 h</td><td class="st-dark">never</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="tiny" style="max-width:none">
+          That is a hardening work order, and it is the one line a wargame transcript
+          structurally cannot contain.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= MARKET ================= -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-mark">THE MARKET</span>
+      <h2>Crowded in hardware. Empty where the decision gets made.</h2>
+    </div>
+
+    <div class="two">
+      <div class="stack">
+        <p>
+          Microgrid software is a busy category, and almost all of it sits either
+          upstream of the outage or downstream of it. Our nearest neighbours are
+          instructive precisely because neither one competes with us.
+        </p>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Company</th><th>What it does</th><th>When</th></tr></thead>
+            <tbody>
+              <tr><td>Gridware</td><td>sensors that locate the fault</td><td>during</td></tr>
+              <tr><td>Squid</td><td>planning what to build</td><td>before</td></tr>
+              <tr><td>SCADA / EPMS</td><td>shows you the breaker state</td><td>during</td></tr>
+              <tr><td><strong>BLACKSTART</strong></td><td><strong>which wing to save, and why</strong></td><td><strong>during + after</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="quiet">
+          Gridware tells you the pole broke. Squid helps you plan what to build.
+          Neither tells a hospital which wing to keep alive at 2 AM, or explains the
+          decision afterward.
+        </p>
+      </div>
+
+      <div class="stack">
+        <h3>Why now, and why us</h3>
+        <p>
+          Adversarial testing of microgrids is already a funded federal research
+          direction, and the reporting obligations are not optional. The buyer has a
+          deadline and a budget line before we ever walk in.
+        </p>
+        <h3 style="margin-top:6px">Wedge, then expand</h3>
+        <p class="quiet">
+          Start as the report generator — mandatory, budgeted, low risk, and it
+          replaces three weeks of log archaeology. Once the graph of a facility is
+          inside the tool, resilience planning and the live control layer are the
+          same graph with more walkers on it.
+        </p>
+        <p class="tiny" style="max-width:none">
+          A second site is one JSON file. Portsmouth and Walter Reed both run on the
+          same simulator — nothing in it knows about any particular campus.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DEMO CTA ================= -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-mark">SEE IT</span>
+      <h2>Four minutes, on a real campus, with the numbers moving.</h2>
+    </div>
+
+    <div class="two">
+      <div class="stack">
+        <p>
+          The console runs the campus over its actual Portsmouth geography. Cut a
+          feeder and the map fractures. Watch the countdown fall under 96. Watch the
+          controller shed the galley before it touches the operating rooms. Then ask
+          it why, and walk the answer back to the breaker that started it.
+        </p>
+        <div class="cta">
+          <a class="btn-lg" href="http://localhost:8000">Open the console →</a>
+          <a class="btn-gh" href="https://github.com/N1tu-Mar/Blackstar">Read the code</a>
+        </div>
+        <p class="tiny" style="max-width:none">
+          Console runs locally: <span class="num">jac start --dev main.jac</span>.
+          A recorded 66-second take lives in <span class="num">demo/</span> if the
+          venue network disagrees.
+        </p>
+      </div>
+
+      <div class="stack">
+        <h3>What to watch for</h3>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Beat</th><th>What happens</th></tr></thead>
+            <tbody>
+              <tr><td>Cut one feeder</td><td>still lit — a second path carries it</td></tr>
+              <tr><td>Cut both</td><td class="st-warn">76.1 h, under the 96 h target</td></tr>
+              <tr><td>Controller runs</td><td class="st-live">sheds 5 loads → 108.3 h</td></tr>
+              <tr><td>Adversary, round 2</td><td class="st-dark">cuts the tie first → tier 1 stranded</td></tr>
+              <tr><td>Ask why</td><td>cited chain back to the breaker</td></tr>
+              <tr><td>Switch site</td><td>Walter Reed, same code</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="rail">
+          <p class="quiet" style="max-width:none">
+            “The defense is a dumb checklist on purpose. The intelligence is on what
+            goes wrong, because you cannot script a disaster.”
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p class="tiny" style="max-width:none">
+      Campus modeled on the public geography of Naval Medical Center Portsmouth;
+      satellite imagery © Esri, Maxar, Earthstar Geographics. Electrical topology,
+      ratings and elevations are engineering estimates for simulation — the
+      as-built single-line drawings are not public. Endurance, islanding and
+      curtailment figures are outputs of the simulator, reproduced from real runs.
+      Built in Jac.
+    </p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // Geometry of the essential branch. x,y in a 560x232 viewBox.
+  var N = [
+    { id: "riv",  t: "ELIZABETH RIVER SUB",  x:  14, y:  18, w: 118, src: true },
+    { id: "eff",  t: "EFFINGHAM ST SUB",     x: 300, y:  18, w: 104, src: true },
+    { id: "nsw",  t: "NORTH CAMPUS SWGR",    x:  30, y:  74, w: 108 },
+    { id: "ssw",  t: "SOUTH CAMPUS SWGR",    x: 300, y:  74, w: 104 },
+    { id: "g1",   t: "CEP GEN 1",            x: 176, y:  74, w:  70, gen: true },
+    { id: "g2",   t: "CEP GEN 2",            x: 434, y:  74, w:  70, gen: true },
+    { id: "swa",  t: "CHARETTE SWBD A",      x:  30, y: 130, w: 108 },
+    { id: "swb",  t: "CHARETTE SWBD B",      x: 300, y: 130, w: 104 },
+    { id: "icu",  t: "ICU",                  x:  14, y: 190, w:  56, tier: 1 },
+    { id: "or",   t: "SURGERY",              x:  78, y: 190, w:  62, tier: 1 },
+    { id: "ed",   t: "EMERGENCY",            x: 148, y: 190, w:  70, tier: 1 },
+    { id: "img",  t: "IMAGING",              x: 300, y: 190, w:  62, tier: 2 },
+    { id: "gal",  t: "GALLEY",               x: 370, y: 190, w:  56, tier: 3 },
+    { id: "adm",  t: "ADMIN",                x: 434, y: 190, w:  56, tier: 3 }
+  ];
+
+  var C = [
+    { id: "f1", a: "riv", b: "nsw", feeder: true },
+    { id: "f2", a: "eff", b: "ssw", feeder: true },
+    { id: "c1", a: "g1",  b: "nsw" },
+    { id: "c2", a: "g2",  b: "ssw" },
+    { id: "c3", a: "nsw", b: "swa" },
+    { id: "c4", a: "ssw", b: "swb" },
+    { id: "t1", a: "swa", b: "swb", tie: true },
+    { id: "l1", a: "swa", b: "icu" },
+    { id: "l2", a: "swa", b: "or"  },
+    { id: "l3", a: "swa", b: "ed"  },
+    { id: "l4", a: "swb", b: "img" },
+    { id: "l5", a: "swb", b: "gal" },
+    { id: "l6", a: "swb", b: "adm" }
+  ];
+
+  var H = 19; // node box height
+  var byId = {};
+  N.forEach(function (n) { byId[n.id] = n; });
+
+  var cablesG = document.getElementById("cables");
+  var nodesG  = document.getElementById("nodes");
+  var elHours = document.getElementById("hours");
+  var elIsl   = document.getElementById("islands");
+  var elShed  = document.getElementById("shedn");
+  var elTrace = document.getElementById("trace");
+  var elStage = document.getElementById("stage");
+
+  var SVGNS = "http://www.w3.org/2000/svg";
+  function mk(tag, attrs) {
+    var e = document.createElementNS(SVGNS, tag);
+    for (var k in attrs) { e.setAttribute(k, attrs[k]); }
+    return e;
+  }
+  function cx(n) { return n.x + n.w / 2; }
+
+  // --- build cables (drawn first so boxes sit on top) ---
+  C.forEach(function (c) {
+    var a = byId[c.a], b = byId[c.b];
+    var x1 = cx(a), y1 = a.y + H, x2 = cx(b), y2 = b.y;
+    var d;
+    if (c.tie) {
+      // route the tie below the switchboards so it reads as a separate path
+      var yb = a.y + H + 12;
+      d = "M" + x1 + " " + (a.y + H) + " L" + x1 + " " + yb +
+          " L" + x2 + " " + yb + " L" + x2 + " " + (b.y + H);
+    } else if (Math.abs(x1 - x2) < 1) {
+      d = "M" + x1 + " " + y1 + " L" + x2 + " " + y2;
+    } else {
+      var ym = y1 + (y2 - y1) / 2;
+      d = "M" + x1 + " " + y1 + " L" + x1 + " " + ym +
+          " L" + x2 + " " + ym + " L" + x2 + " " + y2;
+    }
+    var p = mk("path", { d: d, class: "cbl", fill: "none" });
+    p.dataset.id = c.id;
+    cablesG.appendChild(p);
+  });
+
+  // --- build nodes ---
+  N.forEach(function (n) {
+    var g = mk("g", {});
+    var r = mk("rect", { x: n.x, y: n.y, width: n.w, height: H, class: "n-box", rx: 1 });
+    r.dataset.id = n.id;
+    var label = mk("text", { x: n.x + n.w / 2, y: n.y + 13, class: "n-lab", "text-anchor": "middle" });
+    label.textContent = n.t;
+    g.appendChild(r); g.appendChild(label);
+    nodesG.appendChild(g);
+  });
+
+  // --- state ---
+  var cut = {};         // cable id -> true
+  var shed = {};        // node id -> true
+  var tieClosed = false;
+  var step = 0;
+
+  function passable(c) {
+    if (cut[c.id]) { return false; }
+    if (c.tie && !tieClosed) { return false; }
+    return true;
+  }
+
+  // Islanding, done the way the real thing does it: reachability over
+  // passable conductors only, seeded from live sources.
+  function energized() {
+    var adj = {};
+    N.forEach(function (n) { adj[n.id] = []; });
+    C.forEach(function (c) {
+      if (!passable(c)) { return; }
+      adj[c.a].push(c.b);
+      adj[c.b].push(c.a);
+    });
+
+    var seen = {}, groups = [];
+    N.forEach(function (n) {
+      var isLive = (n.src && !cut["f" + (n.id === "riv" ? 1 : 2)]) || n.gen;
+      if (!isLive || seen[n.id]) { return; }
+      var stack = [n.id], grp = [];
+      seen[n.id] = true;
+      while (stack.length) {
+        var v = stack.pop();
+        grp.push(v);
+        adj[v].forEach(function (w) {
+          if (!seen[w]) { seen[w] = true; stack.push(w); }
+        });
+      }
+      groups.push(grp);
+    });
+    return { groups: groups, lit: seen };
+  }
+
+  function render() {
+    var e = energized();
+    var lit = e.lit;
+
+    document.querySelectorAll(".cbl").forEach(function (p) {
+      p.classList.toggle("cut", !!cut[p.dataset.id] ||
+        (p.dataset.id === "t1" && !tieClosed));
+    });
+    document.querySelectorAll(".n-box").forEach(function (r) {
+      var id = r.dataset.id;
+      r.classList.toggle("off", !lit[id]);
+      r.classList.toggle("shed", !!shed[id]);
+    });
+
+    elIsl.textContent = String(e.groups.length);
+    elShed.textContent = String(Object.keys(shed).length);
+  }
+
+  function setHours(txt, cls) {
+    elHours.textContent = txt;
+    elHours.className = "readout-val " + cls;
+  }
+
+  var b1 = document.getElementById("b1"),
+      b2 = document.getElementById("b2"),
+      b3 = document.getElementById("b3"),
+      b4 = document.getElementById("b4");
+
+  b1.addEventListener("click", function () {
+    cut.f1 = true; step = 1;
+    render();
+    setHours("GRID", "readout-val st-live");
+    elStage.textContent = "one feeder open";
+    elTrace.textContent =
+      "Elizabeth River feeder open. Still lit — the Effingham feeder is carrying " +
+      "the campus. This is the redundancy the design is supposed to have.";
+    b1.disabled = true; b2.classList.add("primary");
+  });
+
+  b2.addEventListener("click", function () {
+    cut.f1 = true; cut.f2 = true; step = 2;
+    render();
+    setHours("76.1", "readout-val st-warn");
+    elStage.textContent = "under target";
+    elTrace.textContent =
+      "Both utility feeds gone. The campus is on its own generators and diesel: " +
+      "76.1 hours against a 96-hour requirement. Nothing has been shed yet, and " +
+      "the site is already non-compliant.";
+    b1.disabled = true; b2.disabled = true;
+    b2.classList.remove("primary"); b3.classList.add("primary");
+  });
+
+  b3.addEventListener("click", function () {
+    if (step < 2) {
+      elTrace.textContent = "Nothing to do — the site is still grid-backed.";
+      return;
+    }
+    // Curtailment order: highest tier first, largest load first. Tier 1 never.
+    shed.gal = true; shed.adm = true; shed.img = true;
+    step = 3;
+    render();
+    setHours("108.3", "readout-val st-live");
+    elStage.textContent = "compliant, tier 1 intact";
+    elTrace.textContent =
+      "Curtailed tier 3 first — galley, administration — then imaging at tier 2. " +
+      "770 kW dropped of 2,590 kW connected. Endurance clears at 108.3 hours and " +
+      "no tier-1 load was touched. Every one of those is a graph node citing the " +
+      "endurance figure that forced it.";
+    b3.disabled = true; b3.classList.remove("primary");
+    b4.classList.add("primary");
+  });
+
+  b4.addEventListener("click", function () {
+    cut = {}; shed = {}; tieClosed = false; step = 0;
+    render();
+    setHours("GRID", "readout-val st-live");
+    elStage.textContent = "healthy";
+    elTrace.textContent =
+      "Both utility feeds are up. One section, grid-backed, nothing curtailed.";
+    [b1, b2, b3].forEach(function (b) { b.disabled = false; b.classList.remove("primary"); });
+    b1.classList.add("primary");
+    b4.classList.remove("primary");
+  });
+
+  render();
+}());
+</script>

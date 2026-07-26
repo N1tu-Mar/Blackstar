@@ -1,9 +1,10 @@
 # Demo assets
 
-`blackstart-demo.mp4` — 58 s, recorded from the running app by
+`blackstart-demo.mp4` — 59 s, recorded from the running app by
 `scripts/record_demo.sh`. Nothing is mocked: the script clicks the app's own
 buttons and every number on screen came out of the simulator during the take,
-including a live RED round with two model calls.
+including a live disaster round with two model calls, and a switch to a
+second site (Walter Reed, Bethesda) at the end.
 
 Re-record with the server running:
 

@@ -59,32 +59,37 @@ post() {
     fi
 }
 
-echo "== resetting =="
-post LoadSite '{"memory_enabled":true}'
+echo "== resetting to Portsmouth =="
+post LoadSite '{"memory_enabled":true,"site_id":"nmcp-portsmouth"}'
 $B open "$APP" >/dev/null 2>&1
-sleep 9
+sleep 10
 
 echo "== capturing =="
-shot "Naval Medical Center Portsmouth. A hospital, and a DoD installation." 5
-shot "27 elements on the real campus. One island, running on utility power." 5
+shot "A hospital that is also a military base. Both are required by law to know this number." 6
+shot "Naval Medical Center Portsmouth. 27 elements, running on grid power." 5
 
-click_label "Cut river feeder"; sleep 5
-shot "Cut the river feeder. Still lit - a second path is carrying the campus." 6
+click_label "Cut one power line"; sleep 5
+shot "Cut one incoming line. Still lit - a second path is carrying the site." 6
 
-click_label "Cut both feeders"; sleep 5
-shot "Both utility feeds gone. 76 hours left, under the 96 the law requires." 6
+click_label "Cut all grid power"; sleep 5
+shot "Cut all grid power. 76 hours left, against the 96 the law requires." 6
 
-click_label "Run BLUE"; sleep 5
-shot "BLUE sheds the galley, then imaging. 108 hours. No model involved." 6
+click_label "Protect critical care"; sleep 5
+shot "The controller sheds the galley, then imaging. 108 hours. No AI involved." 7
 
 click_label "Explain"; sleep 4
-shot "Ask why the galley went dark. Every line cites the node it came from." 7
+shot "Ask why the galley went dark. Every line cites the record it came from." 7
 
-echo "== running a RED round (two model calls, be patient) =="
-click_label "Run RED round"; sleep 50
-shot "RED writes the next failure chain. Floods run downhill; trucks need roads." 7
+echo "== running a disaster (two model calls, be patient) =="
+click_label "Simulate a disaster"; sleep 50
+shot "Now the AI writes the disaster. Floods run downhill; fuel trucks need roads." 7
 $B scroll down >/dev/null 2>&1; sleep 3
-shot "Then it writes down what it got wrong. The next round reads that sentence." 8
+shot "Then it writes down what it got wrong. The next attempt reads that sentence." 8
+
+echo "== switching sites =="
+post LoadSite '{"memory_enabled":true,"site_id":"wrnmmc-bethesda"}'
+$B open "$APP" >/dev/null 2>&1; sleep 10
+shot "Same code, different base. Walter Reed, Bethesda - a site is just a file." 7
 
 echo "== encoding =="
 python3 "$(dirname "$0")/caption_frames.py" "$FRAMES"

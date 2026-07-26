@@ -13,8 +13,9 @@ import from grid.model {
     Run, Tick, Event, Finding, Decision,
     Dashboard, MapView, MapNode, MapEdge, MapPaths, Explanation, ExplainLine,
     Scenario, Strike, Outcome, Lesson, RoundResult, IslandView, FacilityView,
-    SiteSummary
+    SiteSummary, HardeningPlan, Vulnerability
 }
+import from grid.advisor { hardening_plan }
 import from grid.campus { build_campus, reset_campus, list_sites, set_active_site }
 import from grid.basemap { load_basemap, clear_basemap_cache, bx, by }
 import from grid.islands {
@@ -154,6 +155,26 @@ walker:pub GetLessons {
 }
 
 
+walker:pub GetHardeningPlan {
+    """What should this facility actually change?
+
+    The inverse of RunRound. That one asks what an adversary would do; this
+    asks what to build because of it - which is the artifact both the CMS
+    emergency-preparedness rule and 10 U.S.C. 2925 actually require, and the
+    only output here a facility engineer can put in a budget request.
+
+    Read-only. Ranks the campaign already on the graph and returns prose. It
+    never sheds, never switches, and never writes to the grid.
+    """
+    has reports: list[HardeningPlan] = [];
+
+    can go with Root entry {
+        _ = ensure_run();
+        report hardening_plan();
+    }
+}
+
+
 walker:pub ExplainWhy {
     """Walk backward from a facility's fate to the event that caused it."""
     has subject: str = "",
@@ -280,6 +301,7 @@ walker:pub RunRound {
         rnd = open_round(run, run.round_index, scenario.name, scenario.hazard,
                          scenario.expected_effect);
         rnd.predicted_endurance_hours = scenario.predicted_endurance_hours;
+        rnd.opening_endurance_hours = before;
         # Record which lessons were actually in context. With memory off none
         # were, and no edge is written - so the A/B is visible on the graph.
         if run.memory_enabled { _ = link_lessons(rnd); }
@@ -287,7 +309,7 @@ walker:pub RunRound {
         # RUN - resolve, gate, apply, then let BLUE respond.
         run.tick += 1;
         tick = write_tick(run, run.tick, before, len(before_dash.islands), 0.0);
-        (unresolved, rejected) = execute(scenario, tick);
+        (unresolved, rejected) = execute(scenario, tick, rnd);
 
         recompute_islands();
         islands = survey();
@@ -301,6 +323,7 @@ walker:pub RunRound {
         outcome = measure(before, actions, breached, unresolved, rejected,
                           scenario.predicted_endurance_hours);
         rnd.actual_endurance_hours = outcome.endurance_after;
+        rnd.tier1_stranded = outcome.tier1_stranded;
 
         # REFLECT - LLM call 2. This is what makes it a loop, not a lookup.
         lesson = reflect(scenario, outcome);

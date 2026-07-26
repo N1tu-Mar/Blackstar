@@ -26,7 +26,8 @@ RED sees `Dashboard`. Conductors are not in it.
 import from jaclang.byllm.lib { Model }
 import from grid.model {
     GridNode, Substation, Generator, Battery, Facility, Conductor,
-    Dashboard, FacilityView, IslandView, Strike, Scenario, Outcome, Lesson, Event, Tick
+    Dashboard, FacilityView, IslandView, Strike, Scenario, Outcome, Lesson, Event, Tick,
+    Round, Struck
 }
 
 # REQUIRED. The ambient `llm` sourced from jac.toml's [byllm.model]
@@ -417,7 +418,7 @@ def apply_strike(mech: str, target: GridNode) -> tuple[bool, str] {
 Returns the unresolved target names and the rejected strike reasons, both of
 which become learning signal rather than errors.
 """
-def execute(scenario: Scenario, tick: Tick) -> tuple[list[str], list[str]] {
+def execute(scenario: Scenario, tick: Tick, rnd: Round) -> tuple[list[str], list[str]] {
     unresolved: list[str] = [];
     rejected: list[str] = [];
     prior: Event | None = None;
@@ -436,6 +437,11 @@ def execute(scenario: Scenario, tick: Tick) -> tuple[list[str], list[str]] {
         }
         (_landed, detail) = apply_strike(s.mechanism, tgt);
         ev = record_event(tick, s.mechanism, tgt.name, detail, prior);
+        # Join the strike back to the round that ordered it. Only strikes that
+        # actually LANDED are linked - an unresolved name or one the gate
+        # refused never hit the site, so it must not count toward a
+        # vulnerability score.
+        rnd +>:Struck:+> ev;
         prior = ev;
     }
 

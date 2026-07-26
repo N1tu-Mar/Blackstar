@@ -115,6 +115,49 @@ def build_dashboard(tick: int, round_index: int, events: list[str]) -> Dashboard
 }
 
 
+"""Strip structural knowledge out of a dashboard before RED sees it.
+
+Invariant I2 says RED sees nodes, never edges. Island *membership* violates the
+spirit of that: it hands over "these fourteen things are electrically
+together", which is most of the wiring diagram, and it does so fresh every
+round. That is why the first two memory A/B runs came back null - blind RED
+was being given the same structural map as remembering RED, so memory had
+nothing left to contribute.
+
+After redaction RED sees names, categories, tiers, lit/dark/shed status, how
+many islands formed, and how bad the endurance is. It does NOT see which
+elements landed in which island. It has to infer grouping from what went dark
+together, and the only place that inference accumulates is a Lesson.
+
+The UI is never redacted - operators get the whole picture.
+"""
+def redact_for_red(full: Dashboard) -> Dashboard {
+    elems: list[FacilityView] = [];
+    for e in full.elements {
+        elems.append(FacilityView(
+            name=e.name, category=e.category, tier=e.tier,
+            status=e.status, island_id=0
+        ));
+    }
+    isles: list[IslandView] = [];
+    for i in full.islands {
+        isles.append(IslandView(
+            id=0, members=[], endurance_hours=i.endurance_hours,
+            has_generation=i.has_generation, tier1_present=i.tier1_present,
+            served_kw=i.served_kw
+        ));
+    }
+    return Dashboard(
+        site=full.site, tick=full.tick, round_index=full.round_index,
+        elements=elems, islands=isles,
+        site_endurance_hours=full.site_endurance_hours,
+        target_hours=full.target_hours, strikes_allowed=full.strikes_allowed,
+        tier1_stranded=full.tier1_stranded, breach=full.breach,
+        recent_events=full.recent_events
+    );
+}
+
+
 # ----------------------------------------------------------------- PLAN
 
 # The LLM-facing shape is deliberately FLAT - parallel arrays instead of a

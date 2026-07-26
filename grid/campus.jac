@@ -45,128 +45,128 @@ def build_campus -> Run {
     # one. Effingham sits on higher ground at 8.4 m.
     sub_eliz = root ++> Substation(
         name="Elizabeth River Substation", kind="substation",
-        lat=36.8432, lon=-76.3055, elevation_m=2.1,
+        lat=36.8426, lon=-76.3045, elevation_m=2.1,
         kv=34.5, utility_source=True
     );
     sub_effi = root ++> Substation(
         name="Effingham Street Substation", kind="substation",
-        lat=36.8465, lon=-76.3110, elevation_m=8.4,
+        lat=36.8479, lon=-76.312, elevation_m=8.4,
         kv=34.5, utility_source=True
     );
 
     # ------------------------------------------------------ generation / storage
     gen1 = root ++> Generator(
         name="CEP Generator 1", kind="generator",
-        lat=36.8441, lon=-76.3108, elevation_m=3.2,
+        lat=36.84405, lon=-76.31173, elevation_m=3.2,
         kw_rating=1500.0, fuel_gal=6000.0
     );
     gen2 = root ++> Generator(
         name="CEP Generator 2", kind="generator",
-        lat=36.8439, lon=-76.3106, elevation_m=3.2,
+        lat=36.84373, lon=-76.31145, elevation_m=3.2,
         kw_rating=1500.0, fuel_gal=6000.0
     );
     gen3 = root ++> Generator(
         name="Charette Standby Generator", kind="generator",
-        lat=36.8455, lon=-76.3072, elevation_m=7.1,
+        lat=36.84629, lon=-76.30682, elevation_m=7.1,
         kw_rating=800.0, fuel_gal=2000.0
     );
     ups_char = root ++> Battery(
         name="Charette Critical Branch UPS", kind="battery",
-        lat=36.8457, lon=-76.3074, elevation_m=7.2,
+        lat=36.84662, lon=-76.30709, elevation_m=7.2,
         kwh_stored=900.0, kwh_capacity=900.0, max_kw=600.0
     );
     ups_data = root ++> Battery(
         name="Data Center UPS", kind="battery",
-        lat=36.8453, lon=-76.3068, elevation_m=7.4,
+        lat=36.84597, lon=-76.30627, elevation_m=7.4,
         kwh_stored=400.0, kwh_capacity=400.0, max_kw=250.0
     );
 
     # ------------------------------------------------------------- switchgear
     bus_cep = root ++> GridNode(
         name="Central Energy Plant Bus", kind="bus",
-        lat=36.8443, lon=-76.3103, elevation_m=3.2
+        lat=36.84437, lon=-76.31105, elevation_m=3.2
     );
     bus_north = root ++> GridNode(
         name="North Campus Switchgear", kind="bus",
-        lat=36.8458, lon=-76.3085, elevation_m=6.5
+        lat=36.84678, lon=-76.30859, elevation_m=6.5
     );
     bus_south = root ++> GridNode(
         name="South Campus Switchgear", kind="bus",
-        lat=36.8435, lon=-76.3092, elevation_m=4.2
+        lat=36.84308, lon=-76.30955, elevation_m=4.2
     );
     bus_ca = root ++> GridNode(
         name="Charette Switchboard A", kind="bus",
-        lat=36.8456, lon=-76.3078, elevation_m=7.0
+        lat=36.84646, lon=-76.30764, elevation_m=7.0
     );
     bus_cb = root ++> GridNode(
         name="Charette Switchboard B", kind="bus",
-        lat=36.8451, lon=-76.3075, elevation_m=6.8
+        lat=36.84565, lon=-76.30723, elevation_m=6.8
     );
 
     # ---------------------------------------------------------- tier 1 loads
     icu = root ++> Facility(
         name="Intensive Care Unit", kind="facility", category="critical care",
-        lat=36.8460, lon=-76.3080, elevation_m=7.5, tier=1, kw=210.0
+        lat=36.8471, lon=-76.30791, elevation_m=7.5, tier=1, kw=210.0
     );
     surgical = root ++> Facility(
         name="Surgical Suite", kind="facility", category="operating rooms",
-        lat=36.8462, lon=-76.3076, elevation_m=7.6, tier=1, kw=340.0
+        lat=36.84742, lon=-76.30736, elevation_m=7.6, tier=1, kw=340.0
     );
     nicu = root ++> Facility(
         name="Neonatal ICU", kind="facility", category="critical care",
-        lat=36.8459, lon=-76.3073, elevation_m=7.5, tier=1, kw=130.0
+        lat=36.84694, lon=-76.30695, elevation_m=7.5, tier=1, kw=130.0
     );
     ed = root ++> Facility(
         name="Emergency Department", kind="facility", category="emergency",
-        lat=36.8449, lon=-76.3070, elevation_m=6.6, tier=1, kw=260.0
+        lat=36.84533, lon=-76.30655, elevation_m=6.6, tier=1, kw=260.0
     );
     datactr = root ++> Facility(
         name="Network Core and Telemetry", kind="facility", category="communications",
-        lat=36.8452, lon=-76.3066, elevation_m=7.4, tier=1, kw=180.0
+        lat=36.84581, lon=-76.306, elevation_m=7.4, tier=1, kw=180.0
     );
     firepump = root ++> Facility(
         name="Fire Pump House", kind="facility", category="life safety",
-        lat=36.8437, lon=-76.3098, elevation_m=3.9, tier=1, kw=95.0
+        lat=36.84341, lon=-76.31036, elevation_m=3.9, tier=1, kw=95.0
     );
 
     # ---------------------------------------------------------- tier 2 loads
     tower5 = root ++> Facility(
         name="Inpatient Tower Floor 5", kind="facility", category="inpatient ward",
-        lat=36.8464, lon=-76.3082, elevation_m=7.8, tier=2, kw=220.0
+        lat=36.84774, lon=-76.30818, elevation_m=7.8, tier=2, kw=220.0
     );
     imaging = root ++> Facility(
         name="Radiology and MRI", kind="facility", category="imaging",
-        lat=36.8447, lon=-76.3073, elevation_m=6.4, tier=2, kw=290.0
+        lat=36.84501, lon=-76.30695, elevation_m=6.4, tier=2, kw=290.0
     );
     pharmacy = root ++> Facility(
         name="Inpatient Pharmacy", kind="facility", category="pharmacy",
-        lat=36.8450, lon=-76.3079, elevation_m=6.7, tier=2, kw=85.0
+        lat=36.84549, lon=-76.30777, elevation_m=6.7, tier=2, kw=85.0
     );
     lab = root ++> Facility(
         name="Clinical Laboratory", kind="facility", category="laboratory",
-        lat=36.8446, lon=-76.3078, elevation_m=6.5, tier=2, kw=140.0
+        lat=36.84485, lon=-76.30764, elevation_m=6.5, tier=2, kw=140.0
     );
     sterile = root ++> Facility(
         name="Sterile Processing", kind="facility", category="sterile processing",
-        lat=36.8444, lon=-76.3070, elevation_m=6.2, tier=2, kw=160.0
+        lat=36.84453, lon=-76.30655, elevation_m=6.2, tier=2, kw=160.0
     );
 
     # ---------------------------------------------------------- tier 3 loads
     admin = root ++> Facility(
         name="Building One Administration", kind="facility", category="administration",
-        lat=36.8430, lon=-76.3088, elevation_m=3.4, tier=3, kw=110.0
+        lat=36.84228, lon=-76.309, elevation_m=3.4, tier=3, kw=110.0
     );
     galley = root ++> Facility(
         name="Galley and Food Service", kind="facility", category="food service",
-        lat=36.8433, lon=-76.3084, elevation_m=3.8, tier=3, kw=175.0
+        lat=36.84276, lon=-76.30845, elevation_m=3.8, tier=3, kw=175.0
     );
     garage = root ++> Facility(
         name="Parking Structure and Site Lighting", kind="facility", category="site services",
-        lat=36.8427, lon=-76.3095, elevation_m=2.8, tier=3, kw=65.0
+        lat=36.8418, lon=-76.30995, elevation_m=2.8, tier=3, kw=65.0
     );
     annex = root ++> Facility(
         name="Outpatient Clinic Annex", kind="facility", category="outpatient",
-        lat=36.8438, lon=-76.3086, elevation_m=4.1, tier=3, kw=130.0
+        lat=36.84357, lon=-76.30873, elevation_m=4.1, tier=3, kw=130.0
     );
 
     # ------------------------------------------------------------- conductors

@@ -4,7 +4,7 @@ Wires the server-side grid API to the client-side console.
 """
 
 import from endpoints {
-    GetDashboard, GetMap, GetLessons, ExplainWhy,
+    GetDashboard, GetMap, GetBasemap, GetLessons, ExplainWhy,
     LoadSite, CutConductor, RunBlue, RunRound
 }
 

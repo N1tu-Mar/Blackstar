@@ -176,7 +176,23 @@ obj MapNode {
         island_id: int,
         energized: bool,
         shed: bool,
-        damaged: bool;
+        damaged: bool,
+        # Projected server-side into the basemap's viewBox, so the grid and the
+        # geography share one coordinate system and the client does no math.
+        x: float = 0.0,
+        y: float = 0.0;
+}
+
+# Real Portsmouth geography, pre-projected to SVG path strings. Flat lists of
+# strings cross the wire reliably; nested coordinate arrays do not.
+obj MapPaths {
+    has width: float = 1600.0,
+        height: float = 900.0,
+        attribution: str = "",
+        water: list[str] = [],
+        buildings: list[str] = [],
+        roads_major: list[str] = [],
+        roads_minor: list[str] = [];
 }
 
 obj MapEdge {

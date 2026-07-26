@@ -28,7 +28,10 @@ Two runnable scripts prove the system without the UI:
 ```bash
 jac run scripts/demo.jac      # the pitch demo: cuts, shedding, "why did the Galley go dark"
 jac run scripts/redloop.jac   # two full RED rounds with memory (~90 s, 4 LLM calls)
-jac run scripts/ab.jac        # the A/B: memory on vs off, 3 rounds each (~3 min, 12 LLM calls)
+jac run scripts/ab.jac        # the A/B: memory on vs off, 3 rounds each (~5 min, 12 LLM calls)
+
+# Refresh the frozen basemap (needs network; do NOT run this on demo day)
+python3 scripts/fetch_basemap.py
 ```
 
 ---
@@ -44,7 +47,8 @@ jac run scripts/ab.jac        # the A/B: memory on vs off, 3 rounds each (~3 min
 | Provenance archive + backward `explain` | `grid/prov.jac` | ✅ verified, cited chain walks to root cause |
 | RED adversary (`plan` / `reflect`) | `grid/red.jac` | ✅ verified live, both calls, with memory |
 | Public walker API | `endpoints.sv.jac` | ✅ verified via `scripts/demo.jac` |
-| Operator console + campus map | `frontend.cl.jac`, `components/GridMap.cl.jac` | ✅ verified in-browser; islands split visually |
+| Operator console + campus map | `frontend.cl.jac`, `components/GridMap.cl.jac` | ✅ verified in-browser, over real OSM geography |
+| Memory A/B | `scripts/ab.jac` | ✅ separates — memory kills a round earlier |
 
 **The simulation core is verified end to end.** This cascade was produced by an actual run, not by hand:
 
@@ -58,9 +62,27 @@ jac run scripts/ab.jac        # the A/B: memory on vs off, 3 rounds each (~3 min
 
 Round 2 is a genuine unrecoverable breach with tier-1 stranded, and it falls out of arithmetic — nobody scripted it.
 
-`reflect` has been verified in isolation against the live API and produces exactly the reasoning the design needs. Given only an outcome sentence it returned:
+RED's reasoning is the part that cannot be scripted. Unprompted, round 1 produced this chain: flood the river substation, flood CEP Generator 1 — then **fuel-interdict Generator 2, because the access roads are flooded**. "Trucks need roads" appears in no electrical dataset. The plausibility gate then refused to flood a switchgear sitting at 6.5 m against a 4.0 m surge stage, and REFLECT wrote back:
 
-> "The actual topology includes at least one additional redundant or interconnecting tie-line that was not accounted for… indicating the grid has more segmentation and redundancy than originally modeled."
+> "Elevation and flood-susceptibility must be verified per-asset rather than assumed from proximity to a river — North Campus Switchgear is elevated and immune to the modeled surge."
+
+## Does the memory actually help?
+
+Yes, and it took three runs to earn that answer honestly.
+
+| | round 1 | round 2 | round 3 | total held | first kill |
+|---|---|---|---|---|---|
+| **memory ON** | 100.6 h | **0.0 h** | 0.0 h | **100.6** | **round 2** |
+| memory OFF | 100.6 h | 44.0 h | 0.0 h | 144.6 | round 3 |
+
+Remembering RED stranded critical care a full round earlier and held the site 44 hours lower.
+
+The first two runs came back null, and both nulls were real defects rather than a flat result:
+
+1. **A one-strike kill.** Both CEP generators fed only through the plant bus, so a single `equipment_failure` orphaned 3000 kW. RED found it in round 1 of both arms and the site bottomed out immediately. Fixed by sectionalizing the bus.
+2. **The dashboard was leaking the answer.** RED could see island *membership* every round — "these fourteen elements are electrically together" is most of the wiring diagram, handed to both arms for free. A memoryless RED performed exactly as well as a remembering one. `redact_for_red` now strips membership and island IDs, so a Lesson is the only place structural knowledge can accumulate.
+
+If you re-run it and the arms come out level again, suspect the second failure mode first: something in the view is telling RED what it should have had to learn.
 
 ---
 
@@ -69,7 +91,7 @@ Round 2 is a genuine unrecoverable breach with tier-1 stranded, and it falls out
 Do not break these. Each one is load-bearing for the argument the project makes.
 
 1. **No LLM in the load-shedding path.** BLUE is arithmetic and a sorted list. Nobody accredits a language model to de-energize an ICU. `grid/blue.jac` is ~20 lines; it is done, leave it alone.
-2. **RED sees nodes, never edges.** `Dashboard` contains element names, kinds, status, and island grouping. It contains **no conductors**. If RED can enumerate the wiring, a `for` loop replaces it and the whole premise dies. It must hypothesize connectivity — which is also the real adversary's position.
+2. **RED sees nodes, never edges — and never island membership.** `Dashboard` carries element names, kinds, tiers, lit/dark status, how many islands formed and how bad endurance is. It carries **no conductors and no island grouping** (`redact_for_red` in `grid/red.jac` strips both before RED plans; the UI is never redacted). If RED can enumerate the wiring, a `for` loop replaces it and the whole premise dies. Membership is the subtler leak: handing over "these fourteen things are electrically together" is most of the wiring diagram, delivered fresh every round, which lets a *memoryless* RED perform as well as a remembering one. Redaction is what makes a Lesson the only place structural knowledge accumulates.
 3. **Islanding is emergent, never computed.** There is no connected-components routine anywhere in this repo. `Energize` is filtered to passable conductors, so a cut edge is not one it declines to take — it is one it cannot see.
 4. **REFLECT is mandatory.** Round *N+1* receives a *sentence*, not a scalar. A number makes this hill-climbing, which needs no model.
 5. **Every decision is a node with edges to its evidence.** No log files. The `explain` chain is the product.
@@ -127,6 +149,10 @@ This build differs sharply from the `jaclang` Python package most docs describe.
 
 **Client code (compiles to JavaScript)**
 
+- **Constructing a wire `obj` client-side does not initialize its list defaults.** `MapPaths()` as a state default yielded `iterable is not iterable` at render. Pass flat `list[str]` props instead of an object with list fields.
+- **Client modules cannot use project-root imports.** `import from grid.model` compiles but Vite then looks for `./grid/model.js` relative to the component. Use `sv import from ..endpoints { ... }`.
+- **JSX comments `{/* ... */}` are a parse error.**
+
 - **`dict.get()`, `min()` and `max()` do not survive compilation to JS.** They yield `NaN` silently — React then renders an empty SVG and only warns in the console. `components/GridMap.cl.jac` uses explicit loops instead. If a chart renders blank, check the browser console for `Received NaN for the ... attribute` before anything else.
 - QA the running UI with `jac browse open http://localhost:8002/` → `snapshot` / `console` / `screenshot`. The URL needs its scheme or it navigates to `about:blank`.
 
@@ -138,7 +164,7 @@ Each of these is one file, so nobody blocks anybody.
 
 | Owner | Task | File |
 |---|---|---|
-| — | **Map polish**: labels still collide in the dense Charette cluster. Needs real collision avoidance or leader lines. | `components/GridMap.cl.jac` |
+| — | **Map polish**: a few labels still overprint where elements sit within ~20 m of each other (Charette UPS / Switchboard A). Wants leader lines or a real label-placement solver. | `components/GridMap.cl.jac` |
 | — | **Endurance gauge**: the headline number against the 96 h line, colored on crossing. | `components/EnduranceGauge.cl.jac` |
 | — | **BLUE-2 reconfiguration** (stretch): greedy tie-switch closure search maximizing tier-1 kW × endurance. Spec in `TECH_SPEC.md` §7.2. Two `TieSwitch` conductors already exist in the campus. | `grid/blue.jac` |
 | — | **Endurance gauge**: the headline number is plain text today. Wants a real gauge against the 96 h line, colour crossing the threshold. | `components/EnduranceGauge.cl.jac` |

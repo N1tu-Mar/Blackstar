@@ -13,13 +13,20 @@ import from .components.RoundFeed { RoundFeed }
 sv import from endpoints {
     Dashboard, FacilityView, IslandView, Explanation, ExplainLine, Lesson,
     MapView, MapNode, MapEdge, RoundResult,
-    GetDashboard, GetMap, LoadSite, RunBlue, RunRound, GetLessons, ExplainWhy
+    GetDashboard, GetMap, GetBasemap, LoadSite, RunBlue, RunRound, GetLessons, ExplainWhy
 }
 
 def:pub app -> JsxElement {
     has elements: list[FacilityView] = [],
         map_nodes: list[MapNode] = [],
         map_edges: list[MapEdge] = [],
+        water: list[str] = [],
+        buildings: list[str] = [],
+        roads_major: list[str] = [],
+        roads_minor: list[str] = [],
+        view_w: float = 1600.0,
+        view_h: float = 900.0,
+        attribution: str = "",
         islands: list[IslandView] = [],
         events: list[str] = [],
         lessons: list[Lesson] = [],
@@ -82,7 +89,10 @@ def:pub app -> JsxElement {
             <p style={{"color": "#f0a020", "fontSize": "0.8rem"}}>{status}</p>
 
             <div style={{"border": "1px solid #2a2f3a", "padding": "0.5rem", "marginBottom": "1.2rem"}}>
-                <GridMap nodes={map_nodes} edges={map_edges} width={1240.0} height={560.0}/>
+                <GridMap nodes={map_nodes} edges={map_edges}
+                         water={water} buildings={buildings}
+                         roads_major={roads_major} roads_minor={roads_minor}
+                         view_w={view_w} view_h={view_h} attribution={attribution}/>
             </div>
 
             <div style={{"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "2rem"}}>

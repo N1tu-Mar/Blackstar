@@ -1,8 +1,12 @@
-"""BLACKSTART - the campus map.
+"""BLACKSTART - the campus map, over real Portsmouth geography.
 
-Cut a conductor and this splits on screen. Nothing here computes the split:
-`island_id` arrives already assigned by the Energize walker, and the map only
-paints what the walker could reach.
+The basemap is a frozen OpenStreetMap extract of the Elizabeth River, the road
+network, and NMCP's actual building footprints. It ships in the repo, so a
+demo never touches a tile server.
+
+Cut a conductor and the campus splits on screen. Nothing here computes the
+split: `island_id` arrives already assigned by the Energize walker, and the
+map only paints what the walker could reach.
 
 Encoding, deliberately composite so identity is never colour-alone:
   fill   = island identity  (3 validated hues; islands past 3 fold to neutral)
@@ -10,26 +14,23 @@ Encoding, deliberately composite so identity is never colour-alone:
   label  = the element name, always drawn
 
 The three island hues are the categorical slots that pass the all-pairs CVD
-and normal-vision floors against this dark surface. No fourth hue passes,
-which is why islands 4+ fold to neutral and lean on the numeric island badge.
+and normal-vision floors against this surface. No fourth hue passes, which is
+why islands 4+ fold to neutral and lean on the numeric island badge.
 
-Implementation note: this file uses explicit loops rather than dicts,
-`min`/`max`, or `.get()`. Those do not survive the Jac-to-JavaScript
-compilation intact and silently yield NaN coordinates, which React renders as
-an empty SVG with only a console warning.
+All coordinates arrive pre-projected from the server. Client-side Jac silently
+yields NaN for this kind of arithmetic, which React renders as a blank SVG
+with only a console warning.
 """
 
-import from grid.model { MapNode, MapEdge }
+sv import from ..endpoints { MapNode, MapEdge }
 
 glob ISLAND_HUES: list[str] = ["#3987e5", "#d95926", "#199e70"];
 glob NEUTRAL: str = "#6b7280";
-glob DARK_FILL: str = "#2a2f3a";
+glob DARK_FILL: str = "#39404f";
 glob STATUS_DAMAGED: str = "#e66767";
 glob STATUS_SHED: str = "#c98500";
-glob SURFACE: str = "#0b0e14";
+glob INK: str = "#c9cfda";
 glob INK_MUTED: str = "#7a869a";
-glob PAD_X: float = 130.0;
-glob PAD_Y: float = 34.0;
 
 
 """Fill colour for an element, by island identity."""
@@ -45,148 +46,150 @@ def island_fill(island_id: int) -> str {
 """Marker radius - facilities scale with load, infrastructure is fixed."""
 def radius_of(kind: str, kw: float) -> float {
     if kind == "facility" {
-        r = 7.0 + (kw / 45.0);
-        return r if r < 15.0 else 15.0;
+        r = 7.0 + (kw / 42.0);
+        return r if r < 16.0 else 16.0;
     }
-    if kind == "generator" or kind == "substation" { return 10.0; }
-    return 8.0;
+    if kind == "generator" or kind == "substation" { return 11.0; }
+    return 8.5;
 }
 
 
-"""Project a longitude to an x coordinate."""
-def px(lon: float, lo: float, span: float, width: float) -> float {
-    return PAD_X + ((lon - lo) / span) * (width - 2.0 * PAD_X);
+"""Screen x of a named element."""
+def x_of(nodes: list[MapNode], name: str) -> float {
+    for n in nodes {
+        if n.name == name { return n.x; }
+    }
+    return 0.0;
 }
 
 
-"""Project a latitude to a y coordinate. North is up, SVG y grows downward."""
-def py(lat: float, hi: float, span: float, height: float) -> float {
-    return PAD_Y + ((hi - lat) / span) * (height - 2.0 * PAD_Y);
+"""Screen y of a named element."""
+def y_of(nodes: list[MapNode], name: str) -> float {
+    for n in nodes {
+        if n.name == name { return n.y; }
+    }
+    return 0.0;
 }
 
 
-"""Vertical offset for a label, avoiding collisions with earlier labels.
-
-The Charette wing packs eight elements into a small patch of the campus, so a
-fixed offset overprints. Each label counts how many already-placed labels sit
-within its own text box and steps out of the way, alternating above and below
-so a dense cluster fans out instead of stacking one direction off the canvas.
-"""
-def label_dy(nodes: list[MapNode], idx: int, r: float,
-             lon_lo: float, lon_span: float, lat_hi: float, lat_span: float,
-             width: float, height: float) -> float {
+"""Stack a label clear of any label already placed near it."""
+def label_dy(nodes: list[MapNode], idx: int, r: float) -> float {
     me = nodes[idx];
-    mx = px(me.lon, lon_lo, lon_span, width);
-    my = py(me.lat, lat_hi, lat_span, height);
-
     crowd = 0;
     for j in range(idx) {
         o = nodes[j];
-        ox = px(o.lon, lon_lo, lon_span, width);
-        oy = py(o.lat, lat_hi, lat_span, height);
-        dx = mx - ox;
-        dy = my - oy;
+        dx = me.x - o.x;
+        dy = me.y - o.y;
         if dx < 0.0 { dx = 0.0 - dx; }
         if dy < 0.0 { dy = 0.0 - dy; }
-        # Roughly one label's footprint at 9px monospace.
-        if dx < 95.0 and dy < 26.0 { crowd += 1; }
+        if dx < 230.0 and dy < 36.0 { crowd += 1; }
     }
-
-    step = float(crowd / 2) * 11.0;
-    if (crowd % 2) == 0 { return (0.0 - r) - 6.0 - step; }
-    return r + 12.0 + step;
+    step = float(crowd / 2) * 15.0;
+    if (crowd % 2) == 0 { return (0.0 - r) - 9.0 - step; }
+    return r + 18.0 + step;
 }
 
 
-"""Longitude of a named element, or 0.0 when absent."""
-def lon_of(nodes: list[MapNode], name: str) -> float {
-    for n in nodes {
-        if n.name == name { return n.lon; }
-    }
-    return 0.0;
-}
-
-
-"""Latitude of a named element, or 0.0 when absent."""
-def lat_of(nodes: list[MapNode], name: str) -> float {
-    for n in nodes {
-        if n.name == name { return n.lat; }
-    }
-    return 0.0;
-}
-
-
-def:pub GridMap(nodes: list[MapNode], edges: list[MapEdge], width: float, height: float) -> JsxElement {
+def:pub GridMap(nodes: list[MapNode], edges: list[MapEdge],
+                water: list[str], buildings: list[str],
+                roads_major: list[str], roads_minor: list[str],
+                view_w: float, view_h: float, attribution: str) -> JsxElement {
     if len(nodes) == 0 {
-        return <div style={{"color": INK_MUTED, "fontSize": "0.8rem"}}>no campus loaded</div>;
+        return <div style={{"color": INK_MUTED, "fontSize": "0.8rem", "padding": "2rem"}}>
+            no campus loaded
+        </div>;
     }
-
-    lat_lo = nodes[0].lat;
-    lat_hi = nodes[0].lat;
-    lon_lo = nodes[0].lon;
-    lon_hi = nodes[0].lon;
-    for n in nodes {
-        if n.lat < lat_lo { lat_lo = n.lat; }
-        if n.lat > lat_hi { lat_hi = n.lat; }
-        if n.lon < lon_lo { lon_lo = n.lon; }
-        if n.lon > lon_hi { lon_hi = n.lon; }
-    }
-    lat_span = lat_hi - lat_lo;
-    lon_span = lon_hi - lon_lo;
-    if lat_span <= 0.0 { lat_span = 1.0; }
-    if lon_span <= 0.0 { lon_span = 1.0; }
 
     return
-        <div>
-            <svg viewBox={f"0 0 {width:.0f} {height:.0f}"} style={{"width": "100%", "height": "auto", "display": "block"}}>
-                {[
-                    <line
-                        key={f"{e.source}->{e.target}"}
-                        x1={px(lon_of(nodes, e.source), lon_lo, lon_span, width)}
-                        y1={py(lat_of(nodes, e.source), lat_hi, lat_span, height)}
-                        x2={px(lon_of(nodes, e.target), lon_lo, lon_span, width)}
-                        y2={py(lat_of(nodes, e.target), lat_hi, lat_span, height)}
-                        stroke={STATUS_DAMAGED if e.damaged else ("#39404f" if e.normally_open else ("#5b6472" if e.passable else "#39404f"))}
-                        strokeWidth={2}
-                        strokeDasharray={"7 5" if e.damaged else ("2 7" if e.normally_open else ("4 4" if not e.passable else "0"))}
-                        opacity={0.95 if (e.passable or e.damaged) else 0.4}
-                    />
-                    for e in edges
-                ]}
-
-                {[
-                    <g key={n.name}>
-                        <circle
-                            cx={px(n.lon, lon_lo, lon_span, width)}
-                            cy={py(n.lat, lat_hi, lat_span, height)}
-                            r={radius_of(n.kind, n.kw)}
-                            fill={island_fill(n.island_id)}
-                            stroke={STATUS_DAMAGED if n.damaged else (STATUS_SHED if n.shed else SURFACE)}
-                            strokeWidth={3 if (n.damaged or n.shed) else 2}
+        <div style={{"position": "relative"}}>
+            <svg
+                viewBox={f"0 0 {view_w:.0f} {view_h:.0f}"}
+                style={{"width": "100%", "height": "auto", "display": "block", "background": "#070a10"}}
+            >
+                <defs>
+                    <filter id="bsGlow" x="-70%" y="-70%" width="240%" height="240%">
+                        <feGaussianBlur stdDeviation="5" result="b"/>
+                        <feMerge>
+                            <feMergeNode in="b"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                    <filter id="bsFault" x="-70%" y="-70%" width="240%" height="240%">
+                        <feGaussianBlur stdDeviation="3.5" result="b"/>
+                        <feMerge>
+                            <feMergeNode in="b"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+                <g>
+                    {[
+                        <path key={f"w{idx}"} d={d} fill="#0c1a2b" stroke="#153050" strokeWidth={1}/>
+                        for (idx, d) in enumerate(water)
+                    ]}
+                </g>
+                <g>
+                    {[
+                        <path key={f"r{idx}"} d={d} fill="none" stroke="#161c26" strokeWidth={1.3}/>
+                        for (idx, d) in enumerate(roads_minor)
+                    ]}
+                </g>
+                <g>
+                    {[
+                        <path key={f"R{idx}"} d={d} fill="none" stroke="#20293a" strokeWidth={2.4}/>
+                        for (idx, d) in enumerate(roads_major)
+                    ]}
+                </g>
+                <g>
+                    {[
+                        <path key={f"b{idx}"} d={d} fill="#121821" stroke="#1c2431" strokeWidth={0.8}/>
+                        for (idx, d) in enumerate(buildings)
+                    ]}
+                </g>
+                <g>
+                    {[
+                        <line
+                            key={f"{e.source}->{e.target}"}
+                            x1={x_of(nodes, e.source)} y1={y_of(nodes, e.source)}
+                            x2={x_of(nodes, e.target)} y2={y_of(nodes, e.target)}
+                            stroke={STATUS_DAMAGED if e.damaged else ("#3b4557" if e.normally_open else ("#7d8aa0" if e.passable else "#3b4557"))}
+                            strokeWidth={2.6 if e.damaged else 2.2}
+                            strokeDasharray={"9 6" if e.damaged else ("2 8" if e.normally_open else ("5 5" if not e.passable else "0"))}
+                            opacity={0.95 if (e.passable or e.damaged) else 0.4}
+                            filter={"url(#bsFault)" if e.damaged else "none"}
                         />
-                        <text
-                            x={px(n.lon, lon_lo, lon_span, width)}
-                            y={py(n.lat, lat_hi, lat_span, height) + label_dy(nodes, idx, radius_of(n.kind, n.kw), lon_lo, lon_span, lat_hi, lat_span, width, height)}
-                            textAnchor="middle"
-                            fill="#c9cfda"
-                            fontSize="9"
-                            fontFamily="ui-monospace, Menlo, monospace"
-                        >
-                            {n.name}
-                        </text>
-                        <text
-                            x={px(n.lon, lon_lo, lon_span, width)}
-                            y={py(n.lat, lat_hi, lat_span, height) + 3.5}
-                            textAnchor="middle"
-                            fill="#ffffff"
-                            fontSize="9"
-                            fontWeight="700"
-                        >
-                            {str(n.island_id) if n.island_id > 0 else ""}
-                        </text>
-                    </g>
-                    for (idx, n) in enumerate(nodes)
-                ]}
+                        for e in edges
+                    ]}
+                </g>
+                <g>
+                    {[
+                        <g key={n.name}>
+                            <circle
+                                cx={n.x} cy={n.y} r={radius_of(n.kind, n.kw)}
+                                fill={island_fill(n.island_id)}
+                                stroke={STATUS_DAMAGED if n.damaged else (STATUS_SHED if n.shed else "#070a10")}
+                                strokeWidth={3 if (n.damaged or n.shed) else 2}
+                                filter={"none" if (n.island_id < 1) else "url(#bsGlow)"}
+                                opacity={0.55 if (n.island_id < 1) else 1.0}
+                            />
+                            <text
+                                x={n.x} y={n.y + label_dy(nodes, idx, radius_of(n.kind, n.kw))}
+                                textAnchor="middle" fill={INK} fontSize="11"
+                                fontFamily="ui-monospace, Menlo, monospace"
+                                stroke="#070a10" strokeWidth="3" paintOrder="stroke"
+                            >
+                                {n.name}
+                            </text>
+                            <text
+                                x={n.x} y={n.y + 4.0}
+                                textAnchor="middle" fill="#ffffff" fontSize="10" fontWeight="700"
+                            >
+                                {str(n.island_id) if n.island_id > 0 else ""}
+                            </text>
+                        </g>
+                        for (idx, n) in enumerate(nodes)
+                    ]}
+                </g>
             </svg>
 
             <div style={{
@@ -200,6 +203,7 @@ def:pub GridMap(nodes: list[MapNode], edges: list[MapEdge], width: float, height
                 <span><span style={swatch(DARK_FILL)}></span>dark, no source</span>
                 <span><span style={swatch(STATUS_SHED)}></span>shed by BLUE</span>
                 <span><span style={swatch(STATUS_DAMAGED)}></span>damaged</span>
+                <span style={{"marginLeft": "auto"}}>{attribution}</span>
             </div>
         </div>;
 }

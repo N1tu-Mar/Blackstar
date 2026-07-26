@@ -11,16 +11,17 @@ arithmetic.
 import from grid.model {
     GridNode, Substation, Generator, Battery, Facility, Conductor,
     Run, Tick, Event, Finding, Decision,
-    Dashboard, MapView, MapNode, MapEdge, Explanation, ExplainLine,
+    Dashboard, MapView, MapNode, MapEdge, MapPaths, Explanation, ExplainLine,
     Scenario, Strike, Outcome, Lesson, RoundResult, IslandView, FacilityView
 }
 import from grid.campus { build_campus, reset_campus }
+import from grid.basemap { load_basemap, bx, by }
 import from grid.islands {
     recompute_islands, survey, site_endurance, dark_facilities, tier1_stranded,
     all_elements, TARGET_HOURS, UTILITY_HOURS
 }
 import from grid.blue { run_blue, unshed_all }
-import from grid.red { build_dashboard, plan, reflect, execute, measure, resolve_target }
+import from grid.red { build_dashboard, redact_for_red, plan, reflect, execute, measure, resolve_target }
 import from grid.prov {
     active_run, write_tick, record_event, record_finding, record_decision,
     open_round, record_lesson, all_lessons, explain
@@ -111,7 +112,8 @@ walker:pub GetMap {
                 shed = f.shed;
             }
             view.nodes.append(MapNode(
-                name=n.name, kind=n.kind, lat=n.lat, lon=n.lon, tier=tier, kw=kw,
+                name=n.name, kind=n.kind, lat=n.lat, lon=n.lon,
+                x=bx(n.lon), y=by(n.lat), tier=tier, kw=kw,
                 island_id=n.island_id, energized=(n.island_id != -1),
                 shed=shed, damaged=n.damaged
             ));
@@ -125,6 +127,16 @@ walker:pub GetMap {
             }
         }
         report view;
+    }
+}
+
+
+walker:pub GetBasemap {
+    """Real Portsmouth geography as SVG paths. Loaded from disk once, cached."""
+    has reports: list[MapPaths] = [];
+
+    can go with Root entry {
+        report load_basemap();
     }
 }
 
@@ -233,7 +245,9 @@ walker:pub RunRound {
         # PLAN - LLM call 1. Memory off means it plans blind every round.
         lessons: list[Lesson] = [];
         if run.memory_enabled { lessons = all_lessons(); }
-        scenario = plan(before_dash, lessons);
+        # RED plans against a redacted view: no island membership, so the only
+        # place structural knowledge accumulates is a Lesson.
+        scenario = plan(redact_for_red(before_dash), lessons);
 
         rnd = open_round(run, run.round_index, scenario.name, scenario.hazard,
                          scenario.expected_effect);

@@ -9,14 +9,14 @@ because of it.
 
 sv import from ..endpoints { RoundResult }
 
-glob RED_INK: str = "#e66767";
-glob AMBER: str = "#c98500";
-glob INK_MUTED: str = "#7a869a";
+glob RED_INK: str = "#e5484d";
+glob AMBER: str = "#b45309";
+glob INK_MUTED: str = "#737373";
 
 
 def:pub RoundFeed(rounds: list[RoundResult]) -> JsxElement {
     if len(rounds) == 0 {
-        return <div style={{"color": INK_MUTED, "fontSize": "0.78rem"}}>
+        return <div style={{"color": INK_MUTED, "fontSize": "0.85rem"}}>
             No rounds yet. Run a RED round.
         </div>;
     }
@@ -25,44 +25,44 @@ def:pub RoundFeed(rounds: list[RoundResult]) -> JsxElement {
         <div>
             {[
                 <div key={str(r.round_index)} style={{
-                    "borderLeft": f"2px solid {RED_INK}",
-                    "paddingLeft": "0.7rem", "marginBottom": "1rem"
+                    "borderLeft": "2px solid #e5e5e5",
+                    "paddingLeft": "0.9rem", "marginBottom": "1.5rem"
                 }}>
-                    <div style={{"fontSize": "0.8rem", "color": RED_INK}}>
+                    <div style={{"fontSize": "0.9rem", "fontWeight": "600", "color": RED_INK}}>
                         {f"round {r.round_index} - {r.scenario_name}"}
                     </div>
-                    <div style={{"fontSize": "0.74rem", "color": INK_MUTED, "marginBottom": "0.3rem"}}>
+                    <div style={{"fontSize": "0.82rem", "color": INK_MUTED, "marginBottom": "0.5rem"}}>
                         {r.hazard}
                     </div>
 
                     {[
-                        <div key={f"{r.round_index}-{s.target_name}"} style={{"fontSize": "0.74rem"}}>
+                        <div key={f"{r.round_index}-{s.target_name}"} style={{"fontSize": "0.82rem", "padding": "0.1rem 0"}}>
                             {f"-> {s.mechanism} on {s.target_name}"}
                         </div>
                         for s in r.strikes
                     ]}
 
-                    <div style={{"fontSize": "0.74rem", "marginTop": "0.3rem"}}>
+                    <div style={{"fontSize": "0.82rem", "marginTop": "0.5rem", "color": "#737373"}}>
                         {f"endurance {r.outcome.endurance_before:.1f} h -> {r.outcome.endurance_after:.1f} h, {r.outcome.islands_formed} islands"}
                     </div>
 
                     {[
-                        <div key={f"{r.round_index}-rej-{idx}"} style={{"fontSize": "0.72rem", "color": AMBER}}>
+                        <div key={f"{r.round_index}-rej-{idx}"} style={{"fontSize": "0.8rem", "color": AMBER}}>
                             {f"rejected: {why}"}
                         </div>
                         for (idx, why) in enumerate(r.outcome.rejected_strikes)
                     ]}
 
                     {[
-                        <div key={f"{r.round_index}-shed-{idx}"} style={{"fontSize": "0.72rem", "color": AMBER}}>
+                        <div key={f"{r.round_index}-shed-{idx}"} style={{"fontSize": "0.8rem", "color": AMBER}}>
                             {f"BLUE shed: {name}"}
                         </div>
                         for (idx, name) in enumerate(r.outcome.shed_actions)
                     ]}
 
                     <div style={{
-                        "fontSize": "0.74rem", "marginTop": "0.4rem",
-                        "color": "#c9cfda", "fontStyle": "italic"
+                        "fontSize": "0.85rem", "marginTop": "0.6rem", "lineHeight": "1.5",
+                        "color": "#0a0a0a"
                     }}>
                         {f"learned: {r.lesson.revision}"}
                     </div>

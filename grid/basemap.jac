@@ -17,6 +17,7 @@ against a true Mercator is well under a pixel.
 
 import json;
 import math;
+import base64;
 import from grid.model { MapPaths }
 
 # The render window, deliberately tighter than the fetched extent so the
@@ -91,7 +92,16 @@ def load_basemap -> MapPaths {
         return out;
     }
 
-    out.attribution = str(raw.get("attribution", ""));
+    out.attribution = "Imagery (c) Esri, Maxar, Earthstar Geographics - Map data (c) OpenStreetMap contributors";
+
+    # Inline the satellite JPEG. Read once, cached with the rest of the layer.
+    try {
+        with open("data/satellite.jpg", "rb") as img {
+            out.satellite = "data:image/jpeg;base64," + base64.b64encode(img.read()).decode("ascii");
+        }
+    } except Exception {
+        out.satellite = "";
+    }
 
     water: list[list[list[float]]] = raw.get("water", []);
     for ring in water {

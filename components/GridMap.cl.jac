@@ -1,8 +1,8 @@
-"""BLACKSTART - the campus map, over real Portsmouth geography.
+"""BLACKSTART - the campus map, over satellite imagery.
 
-The basemap is a frozen OpenStreetMap extract of the Elizabeth River, the road
-network, and NMCP's actual building footprints. It ships in the repo, so a
-demo never touches a tile server.
+The backdrop is Esri World Imagery of Naval Medical Center Portsmouth, frozen
+into the repo and inlined as a data URI, so a demo never touches a tile server.
+Grid elements sit on the buildings they actually represent.
 
 Cut a conductor and the campus splits on screen. Nothing here computes the
 split: `island_id` arrives already assigned by the Energize walker, and the
@@ -13,10 +13,6 @@ Encoding, deliberately composite so identity is never colour-alone:
   stroke = status           (damaged / shed) - reserved status colours
   label  = the element name, always drawn
 
-The three island hues are the categorical slots that pass the all-pairs CVD
-and normal-vision floors against this surface. No fourth hue passes, which is
-why islands 4+ fold to neutral and lean on the numeric island badge.
-
 All coordinates arrive pre-projected from the server. Client-side Jac silently
 yields NaN for this kind of arithmetic, which React renders as a blank SVG
 with only a console warning.
@@ -25,12 +21,11 @@ with only a console warning.
 sv import from ..endpoints { MapNode, MapEdge }
 
 glob ISLAND_HUES: list[str] = ["#3987e5", "#d95926", "#199e70"];
-glob NEUTRAL: str = "#6b7280";
-glob DARK_FILL: str = "#39404f";
-glob STATUS_DAMAGED: str = "#e66767";
-glob STATUS_SHED: str = "#c98500";
-glob INK: str = "#c9cfda";
-glob INK_MUTED: str = "#7a869a";
+glob NEUTRAL: str = "#9ca3af";
+glob DARK_FILL: str = "#4b5563";
+glob STATUS_DAMAGED: str = "#e5484d";
+glob STATUS_SHED: str = "#f5a524";
+glob HALO: str = "#0a0a0a";
 
 
 """Fill colour for an element, by island identity."""
@@ -46,8 +41,8 @@ def island_fill(island_id: int) -> str {
 """Marker radius - facilities scale with load, infrastructure is fixed."""
 def radius_of(kind: str, kw: float) -> float {
     if kind == "facility" {
-        r = 7.0 + (kw / 42.0);
-        return r if r < 16.0 else 16.0;
+        r = 7.0 + (kw / 44.0);
+        return r if r < 15.0 else 15.0;
     }
     if kind == "generator" or kind == "substation" { return 11.0; }
     return 8.5;
@@ -91,92 +86,64 @@ def label_dy(nodes: list[MapNode], idx: int, r: float) -> float {
 
 
 def:pub GridMap(nodes: list[MapNode], edges: list[MapEdge],
-                water: list[str], buildings: list[str],
-                roads_major: list[str], roads_minor: list[str],
-                view_w: float, view_h: float, attribution: str) -> JsxElement {
+                satellite: str, view_w: float, view_h: float,
+                attribution: str) -> JsxElement {
     if len(nodes) == 0 {
-        return <div style={{"color": INK_MUTED, "fontSize": "0.8rem", "padding": "2rem"}}>
-            no campus loaded
+        return <div style={{"color": "#737373", "fontSize": "0.85rem", "padding": "3rem"}}>
+            No campus loaded.
         </div>;
     }
 
     return
-        <div style={{"position": "relative"}}>
+        <div>
             <svg
                 viewBox={f"0 0 {view_w:.0f} {view_h:.0f}"}
-                style={{"width": "100%", "height": "auto", "display": "block", "background": "#070a10"}}
+                style={{"width": "100%", "height": "auto", "display": "block", "background": "#0d1117"}}
             >
                 <defs>
                     <filter id="bsGlow" x="-70%" y="-70%" width="240%" height="240%">
-                        <feGaussianBlur stdDeviation="5" result="b"/>
-                        <feMerge>
-                            <feMergeNode in="b"/>
-                            <feMergeNode in="SourceGraphic"/>
-                        </feMerge>
-                    </filter>
-                    <filter id="bsFault" x="-70%" y="-70%" width="240%" height="240%">
-                        <feGaussianBlur stdDeviation="3.5" result="b"/>
+                        <feGaussianBlur stdDeviation="4" result="b"/>
                         <feMerge>
                             <feMergeNode in="b"/>
                             <feMergeNode in="SourceGraphic"/>
                         </feMerge>
                     </filter>
                 </defs>
-                <g>
-                    {[
-                        <path key={f"w{idx}"} d={d} fill="#0c1a2b" stroke="#153050" strokeWidth={1}/>
-                        for (idx, d) in enumerate(water)
-                    ]}
-                </g>
-                <g>
-                    {[
-                        <path key={f"r{idx}"} d={d} fill="none" stroke="#161c26" strokeWidth={1.3}/>
-                        for (idx, d) in enumerate(roads_minor)
-                    ]}
-                </g>
-                <g>
-                    {[
-                        <path key={f"R{idx}"} d={d} fill="none" stroke="#20293a" strokeWidth={2.4}/>
-                        for (idx, d) in enumerate(roads_major)
-                    ]}
-                </g>
-                <g>
-                    {[
-                        <path key={f"b{idx}"} d={d} fill="#121821" stroke="#1c2431" strokeWidth={0.8}/>
-                        for (idx, d) in enumerate(buildings)
-                    ]}
-                </g>
+
+                <image href={satellite} x="0" y="0" width={view_w} height={view_h} opacity="0.62"/>
+                <rect x="0" y="0" width={view_w} height={view_h} fill="#0a0f18" opacity="0.3"/>
+
                 <g>
                     {[
                         <line
                             key={f"{e.source}->{e.target}"}
                             x1={x_of(nodes, e.source)} y1={y_of(nodes, e.source)}
                             x2={x_of(nodes, e.target)} y2={y_of(nodes, e.target)}
-                            stroke={STATUS_DAMAGED if e.damaged else ("#3b4557" if e.normally_open else ("#7d8aa0" if e.passable else "#3b4557"))}
-                            strokeWidth={2.6 if e.damaged else 2.2}
-                            strokeDasharray={"9 6" if e.damaged else ("2 8" if e.normally_open else ("5 5" if not e.passable else "0"))}
-                            opacity={0.95 if (e.passable or e.damaged) else 0.4}
-                            filter={"url(#bsFault)" if e.damaged else "none"}
+                            stroke={STATUS_DAMAGED if e.damaged else ("#94a3b8" if e.normally_open else ("#e2e8f0" if e.passable else "#94a3b8"))}
+                            strokeWidth={3.0 if e.damaged else 2.4}
+                            strokeDasharray={"10 7" if e.damaged else ("2 9" if e.normally_open else ("5 5" if not e.passable else "0"))}
+                            opacity={0.95 if e.damaged else (0.85 if e.passable else 0.4)}
                         />
                         for e in edges
                     ]}
                 </g>
+
                 <g>
                     {[
                         <g key={n.name}>
                             <circle
                                 cx={n.x} cy={n.y} r={radius_of(n.kind, n.kw)}
                                 fill={island_fill(n.island_id)}
-                                stroke={STATUS_DAMAGED if n.damaged else (STATUS_SHED if n.shed else "#070a10")}
+                                stroke={STATUS_DAMAGED if n.damaged else (STATUS_SHED if n.shed else "#ffffff")}
                                 strokeWidth={3 if (n.damaged or n.shed) else 2}
                                 filter={"none" if (n.island_id < 1) else "url(#bsGlow)"}
-                                opacity={0.55 if (n.island_id < 1) else 1.0}
+                                opacity={0.6 if (n.island_id < 1) else 1.0}
                             />
                             <text
                                 x={n.x} y={n.y + label_dy(nodes, idx, radius_of(n.kind, n.kw))}
-                                textAnchor="middle" fill={INK} fontSize="11"
-                                fontFamily="ui-monospace, Menlo, monospace"
-                                stroke="#070a10" strokeWidth="3" paintOrder="stroke"
+                                textAnchor="middle" fill="#ffffff" fontSize="12"
+                                fontFamily="ui-sans-serif, -apple-system, system-ui, sans-serif"
+                                stroke={HALO} strokeWidth="3.5" paintOrder="stroke"
                             >
                                 {n.name}
                             </text>
@@ -193,17 +160,17 @@ def:pub GridMap(nodes: list[MapNode], edges: list[MapEdge],
             </svg>
 
             <div style={{
-                "display": "flex", "gap": "1rem", "flexWrap": "wrap",
-                "fontSize": "0.7rem", "color": INK_MUTED, "marginTop": "0.5rem"
+                "display": "flex", "gap": "1.1rem", "flexWrap": "wrap", "alignItems": "center",
+                "fontSize": "0.75rem", "color": "#737373",
+                "padding": "0.75rem 1rem", "borderTop": "1px solid #e5e5e5"
             }}>
-                <span><span style={swatch(ISLAND_HUES[0])}></span>island 1</span>
-                <span><span style={swatch(ISLAND_HUES[1])}></span>island 2</span>
-                <span><span style={swatch(ISLAND_HUES[2])}></span>island 3</span>
-                <span><span style={swatch(NEUTRAL)}></span>island 4+</span>
-                <span><span style={swatch(DARK_FILL)}></span>dark, no source</span>
-                <span><span style={swatch(STATUS_SHED)}></span>shed by BLUE</span>
-                <span><span style={swatch(STATUS_DAMAGED)}></span>damaged</span>
-                <span style={{"marginLeft": "auto"}}>{attribution}</span>
+                <span><span style={swatch(ISLAND_HUES[0])}></span>Island 1</span>
+                <span><span style={swatch(ISLAND_HUES[1])}></span>Island 2</span>
+                <span><span style={swatch(ISLAND_HUES[2])}></span>Island 3</span>
+                <span><span style={swatch(DARK_FILL)}></span>Dark</span>
+                <span><span style={swatch(STATUS_SHED)}></span>Shed by BLUE</span>
+                <span><span style={swatch(STATUS_DAMAGED)}></span>Damaged</span>
+                <span style={{"marginLeft": "auto", "fontSize": "0.68rem"}}>{attribution}</span>
             </div>
         </div>;
 }
@@ -213,6 +180,6 @@ def:pub GridMap(nodes: list[MapNode], edges: list[MapEdge],
 def swatch(color: str) -> dict {
     return {
         "display": "inline-block", "width": "9px", "height": "9px",
-        "background": color, "marginRight": "0.3rem", "borderRadius": "2px"
+        "background": color, "marginRight": "0.4rem", "borderRadius": "50%"
     };
 }

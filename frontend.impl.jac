@@ -16,14 +16,12 @@ impl app.refresh -> None {
         map_nodes = mres.reports[0].nodes;
         map_edges = mres.reports[0].edges;
     }
-    if len(roads_major) == 0 {
+    # The satellite backdrop is ~550 KB of base64. Fetch it once, not per tick.
+    if satellite == "" {
         bres = root spawn GetBasemap();
         if bres.reports {
             bp = bres.reports[0];
-            water = bp.water;
-            buildings = bp.buildings;
-            roads_major = bp.roads_major;
-            roads_minor = bp.roads_minor;
+            satellite = bp.satellite;
             view_w = bp.width;
             view_h = bp.height;
             attribution = bp.attribution;
@@ -35,7 +33,7 @@ impl app.refresh -> None {
 
 impl app.onLoadSite -> None {
     busy = True;
-    status = "rebuilding campus...";
+    status = "Rebuilding the campus...";
     _ = root spawn LoadSite(memory_enabled=True);
     explain_lines = [];
     rounds = [];
@@ -44,9 +42,28 @@ impl app.onLoadSite -> None {
     busy = False;
 }
 
+impl app.onCutRiver -> None {
+    busy = True;
+    status = "Opening the Elizabeth River feeder...";
+    _ = root spawn CutConductor(label="Elizabeth 34.5kV Feeder");
+    await refresh();
+    status = "River feeder open. Still lit - a second path is carrying the campus.";
+    busy = False;
+}
+
+impl app.onCutBoth -> None {
+    busy = True;
+    status = "Opening both utility feeders...";
+    _ = root spawn CutConductor(label="Elizabeth 34.5kV Feeder");
+    _ = root spawn CutConductor(label="Effingham 34.5kV Feeder");
+    await refresh();
+    status = "Both utility feeds gone. The campus is on its own generation.";
+    busy = False;
+}
+
 impl app.onRunBlue -> None {
     busy = True;
-    status = "running the controller...";
+    status = "Running the controller...";
     _ = root spawn RunBlue();
     await refresh();
     status = "";
@@ -55,7 +72,7 @@ impl app.onRunBlue -> None {
 
 impl app.onRunRound -> None {
     busy = True;
-    status = "RED is planning, this takes a moment...";
+    status = "RED is planning. This takes a moment - two model calls.";
     rres = root spawn RunRound();
     if rres.reports {
         rounds = rounds + [rres.reports[0]];

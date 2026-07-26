@@ -192,21 +192,30 @@ walker:pub CutConductor {
         run = ensure_run();
         run.tick += 1;
         tick = write_tick(run, run.tick, 0.0, 0, 0.0);
-        hit = False;
+        # Distinguish "already open" from "no such conductor". Re-cutting an
+        # open feeder is a no-op, not a miss, and logging it as one puts noise
+        # in the evidence chain.
+        exists = False;
+        opened = False;
         for n in all_elements() {
             for e in [edge n ->:Conductor:->] {
-                if e.label == self.label and e.closed {
+                if e.label != self.label { continue; }
+                exists = True;
+                if e.closed {
                     e.closed = False;
                     e.damaged = True;
                     record_event(tick, "manual_cut", e.label,
                                  f"{e.label} opened by operator", None);
-                    hit = True;
+                    opened = True;
                 }
             }
         }
-        if not hit {
+        if not exists {
             record_event(tick, "manual_cut_missed", self.label,
                          "no conductor by that name", None);
+        } elif not opened {
+            # Nothing changed, so do not advance the clock or leave an event.
+            run.tick -= 1;
         }
         recompute_islands();
         report build_dashboard(run.tick, run.round_index, recent_event_text(12));

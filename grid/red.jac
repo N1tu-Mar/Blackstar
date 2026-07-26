@@ -198,7 +198,16 @@ sem draft_scenario.lessons = "What earlier rounds taught you about this facility
 """Zip RED's flat draft back into an ordered chain of typed strikes."""
 def plan(view: Dashboard, lessons: list[Lesson]) -> Scenario {
     d = draft_scenario(view, lessons);
-    out = Scenario(name=d.name, hazard=d.hazard, expected_effect=d.expected_effect, strikes=[]);
+
+    # Models sometimes echo the schema's own name back as the value. Catch it
+    # here rather than trusting the prompt, and fall back to the hazard.
+    label = d.name.strip();
+    low = label.lower();
+    if low == "" or "scenariodraft" in low or low.startswith("scenario") {
+        label = d.hazard.split(",")[0].strip() if d.hazard else "Unnamed scenario";
+    }
+
+    out = Scenario(name=label, hazard=d.hazard, expected_effect=d.expected_effect, strikes=[]);
     limit = len(d.targets);
     # The budget is enforced here, not merely requested in the prompt.
     if limit > view.strikes_allowed { limit = view.strikes_allowed; }

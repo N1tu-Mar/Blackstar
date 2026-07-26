@@ -189,6 +189,9 @@ obj MapPaths {
     has width: float = 1600.0,
         height: float = 900.0,
         attribution: str = "",
+        # Satellite imagery as a data URI, frozen into the repo and inlined so
+        # the page needs no tile server and no static-asset route.
+        satellite: str = "",
         water: list[str] = [],
         buildings: list[str] = [],
         roads_major: list[str] = [],

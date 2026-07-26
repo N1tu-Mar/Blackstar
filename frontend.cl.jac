@@ -9,12 +9,18 @@ import from .components.ElementRow { ElementRow }
 import from .components.GridMap { GridMap }
 import from .components.RoundFeed { RoundFeed }
 
+# NOTE: a `walker:pub` is only served if it appears in this list. The dev
+# server registers the walkers reachable from the client import graph and drops
+# the rest, so a walker declared in endpoints.sv.jac but missing here answers
+# 404 at /walker/<Name> - which is how GetHardeningPlan went unreachable.
+# Adding an endpoint means adding it in both files.
 sv import from endpoints {
     Dashboard, FacilityView, IslandView, Explanation, ExplainLine, Lesson,
     MapView, MapNode, MapEdge, RoundResult, SiteSummary,
+    HardeningPlan, Vulnerability,
     GetDashboard, GetMap, GetBasemap, LoadSite, ListSites, CutConductor,
     RunBlue, RunRound, GetLessons, ExplainWhy,
-    GetReportLines, RunOracle, GetCoverageLines
+    GetReportLines, RunOracle, GetCoverageLines, GetHardeningPlan
 }
 
 def:pub app -> JsxElement {
@@ -37,6 +43,12 @@ def:pub app -> JsxElement {
         target: float = 96.0,
         report_lines: list[ExplainLine] = [],
         oracle_line: str = "",
+        plan_assessment: str = "",
+        plan_spof: str = "",
+        plan_measures: list[str] = [],
+        plan_rationales: list[str] = [],
+        plan_gains: list[str] = [],
+        plan_vulns: list[Vulnerability] = [],
         subject: str = "Galley and Food Service",
         status: str = "",
         busy: bool = False;
@@ -56,6 +68,7 @@ def:pub app -> JsxElement {
     async def onReport -> None;
     async def onOracle -> None;
     async def onCoverage -> None;
+    async def onHarden -> None;
 
     under = endurance < target;
 
@@ -135,6 +148,7 @@ def:pub app -> JsxElement {
                     <button onClick={onRunRound} disabled={busy} style={BTN_PRIMARY}>Simulate a disaster</button>
                     <button onClick={onOracle} disabled={busy} style={BTN}>Worst attack, no AI</button>
                     <button onClick={onCoverage} disabled={busy} style={BTN}>What we never tested</button>
+                    <button onClick={onHarden} disabled={busy} style={BTN}>What should we fix?</button>
                     <button onClick={onReport} disabled={busy} style={BTN}>File the legal report</button>
                 </div>
 
@@ -153,6 +167,36 @@ def:pub app -> JsxElement {
 
                 <div style={{"fontSize": "0.85rem", "color": "#0a0a0a", "marginBottom": "1rem"}}>
                     {oracle_line}
+                </div>
+
+                <div style={{"marginBottom": "1rem"}}>
+                    <h2 style={H2}>{"What to fix" if plan_assessment != "" else ""}</h2>
+                    <div style={{"fontSize": "0.9rem", "lineHeight": "1.6", "marginBottom": "0.75rem"}}>
+                        {plan_assessment}
+                    </div>
+                    {[
+                        <div key={str(idx)} style={{
+                            "fontSize": "0.85rem", "lineHeight": "1.5",
+                            "padding": "0.5rem 0", "borderBottom": "1px solid #f5f5f5"
+                        }}>
+                            <div style={{"fontWeight": "600"}}>{f"{idx + 1}. {m}"}</div>
+                            <div style={{"color": "#737373", "marginTop": "0.2rem"}}>
+                                {plan_rationales[idx] if idx < len(plan_rationales) else ""}
+                            </div>
+                            <div style={{"color": "#0a0a0a", "marginTop": "0.2rem"}}>
+                                {plan_gains[idx] if idx < len(plan_gains) else ""}
+                            </div>
+                        </div>
+                        for (idx, m) in enumerate(plan_measures)
+                    ]}
+                    {[
+                        <div key={v.element_name} style={{
+                            "fontSize": "0.8rem", "color": "#737373", "padding": "0.2rem 0"
+                        }}>
+                            {f"{v.element_name} - implicated in {v.times_struck} of {v.scenarios_total} scenarios, worst case {v.worst_endurance_after:.1f} h"}
+                        </div>
+                        for v in plan_vulns
+                    ]}
                 </div>
 
                 <div style={{"marginBottom": "1rem"}}>

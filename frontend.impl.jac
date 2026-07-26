@@ -127,6 +127,24 @@ impl app.onReport -> None {
 }
 
 
+impl app.onHarden -> None {
+    busy = True;
+    status = "Ranking what actually failed, and what to build because of it...";
+    res = root spawn GetHardeningPlan();
+    if res.reports {
+        p = res.reports[0];
+        plan_assessment = p.assessment;
+        plan_spof = p.single_point_of_failure;
+        plan_measures = p.measures;
+        plan_rationales = p.rationales;
+        plan_gains = p.expected_gains;
+        plan_vulns = p.vulnerabilities;
+    }
+    status = "";
+    busy = False;
+}
+
+
 impl app.onOracle -> None {
     busy = True;
     status = "Searching for the worst possible attack, with no AI involved...";

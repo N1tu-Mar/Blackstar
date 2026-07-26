@@ -56,7 +56,13 @@ import from grid.prov { active_run, all_lessons }
 # The genuinely key-free demo is the deterministic half, which is most of the
 # system: scripts/oracle.jac, report.jac, coverage.jac, criticality.jac and
 # blackstart.jac all run with no model and no network.
-glob llm: Model = Model(model_name=os.environ.get("BLACKSTART_MODEL", "claude-sonnet-5"));
+#
+# temperature=None so byllm's 0.7 default is not sent - claude-sonnet-5 rejects
+# the parameter as deprecated. See the longer note in grid/red.jac.
+glob llm: Model = Model(
+    model_name=os.environ.get("BLACKSTART_MODEL", "claude-sonnet-5"),
+    call_params={"temperature": None}
+);
 
 # How many vulnerabilities to carry into the recommendation. Beyond about four
 # the advice stops being a priority list and starts being a wish list.

@@ -49,7 +49,20 @@ import from grid.model {
 # The genuinely key-free demo is the deterministic half, which is most of the
 # system: scripts/oracle.jac, report.jac, coverage.jac, criticality.jac and
 # blackstart.jac all run with no model and no network.
-glob llm: Model = Model(model_name=os.environ.get("BLACKSTART_MODEL", "claude-sonnet-5"));
+#
+# `temperature=None` is also required, and is not a style choice. byllm always
+# puts a temperature in the request - jac.toml has no key that omits it, and an
+# unset one falls back to 0.7 - but claude-sonnet-5 rejects the parameter
+# outright with "`temperature` is deprecated for this model", failing the call
+# in under a second. litellm's own metadata still lists temperature as
+# supported here, so drop_params does not strip it either. Passing None
+# explicitly beats the 0.7 default and litellm drops the key before it is sent.
+# On a BLACKSTART_MODEL override litellm drops the key just the same, leaving
+# that provider's own default - which is what we want.
+glob llm: Model = Model(
+    model_name=os.environ.get("BLACKSTART_MODEL", "claude-sonnet-5"),
+    call_params={"temperature": None}
+);
 import from grid.islands {
     recompute_islands, survey, site_endurance, dark_facilities, tier1_stranded,
     all_elements, TARGET_HOURS, UTILITY_HOURS

@@ -30,6 +30,7 @@ opens a breaker. It reads a finished campaign and returns prose for a human.
 The invariant that no model touches the load-shedding decision is untouched.
 """
 
+import os;
 # byllm 0.6.19 exposes this as `byllm.lib`; the `jaclang.byllm.lib` path only
 # exists on older builds and dies here with a bare ModuleNotFoundError at import.
 import from byllm.lib { Model }
@@ -43,7 +44,11 @@ import from grid.prov { active_run, all_lessons }
 
 # Same reason as grid/red.jac: the ambient model from jac.toml resolves to None
 # and every call dies without a stack. Declare it explicitly.
-glob llm: Model = Model(model_name="claude-sonnet-5");
+# The model is env-selectable so a dead key, a rate limit or venue wifi cannot
+# end the demo. Default is unchanged. Override with BLACKSTART_MODEL, e.g.
+#   BLACKSTART_MODEL=gemini/gemini-2.0-flash   (needs GOOGLE_API_KEY)
+#   BLACKSTART_MODEL=mockllm                   (offline, no network at all)
+glob llm: Model = Model(model_name=os.environ.get("BLACKSTART_MODEL", "claude-sonnet-5"));
 
 # How many vulnerabilities to carry into the recommendation. Beyond about four
 # the advice stops being a priority list and starts being a wish list.

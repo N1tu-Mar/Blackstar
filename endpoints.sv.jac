@@ -30,7 +30,7 @@ import from grid.prov {
     open_round, record_lesson, all_lessons, explain, link_lessons, why_round
 }
 import from grid.report { build_report, render_markdown, flatten_lines, ComplianceReport }
-import from grid.oracle { worst_chain, OracleResult }
+import from grid.oracle { worst_chain, coverage, OracleResult, Coverage, Blindspot }
 
 
 """Ensure a campus exists, building one on first call."""
@@ -411,5 +411,24 @@ walker:pub GetReportLines {
     can go with Root entry {
         _ = ensure_run();
         for l in flatten_lines(build_report()) { report l; }
+    }
+}
+
+
+walker:pub RunCoverage {
+    """What the RED campaign never tested. Writes nothing; every probe is undone.
+
+    The advisor ranks what RED struck. This reports what it did not, which is
+    the one thing a red-team transcript structurally cannot contain.
+    """
+    has beam: int = 6,
+        reports: list[Coverage] = [];
+
+    can go with Root entry {
+        _ = ensure_run();
+        b = self.beam;
+        if b < 1 { b = 1; }
+        if b > 12 { b = 12; }
+        report coverage(b);
     }
 }

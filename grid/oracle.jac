@@ -43,7 +43,8 @@ Two invariants this file must not violate:
 """
 
 import from grid.model {
-    GridNode, Substation, Generator, Battery, Facility, Conductor, IslandView
+    GridNode, Substation, Generator, Battery, Facility, Conductor, IslandView,
+    Run, Round, Event, HasRound, Struck
 }
 import from grid.islands {
     all_elements, recompute_islands, survey, site_endurance, tier1_stranded
@@ -51,6 +52,7 @@ import from grid.islands {
 import from grid.blue { run_blue, unshed_all }
 import from grid.red { MECHANISMS, plausible, apply_strike }
 import from grid.campus { site_target_hours }
+import from grid.prov { active_run }
 
 
 # ------------------------------------------------------------------- snapshots
@@ -393,4 +395,170 @@ def compare(red_endurance: float, strikes: int, beam: int) -> Verdict {
         );
     }
     return v;
+}
+
+
+# -------------------------------------------------------------------- coverage
+
+"""One element ORACLE can hurt, and whether the RED campaign ever tried it."""
+obj Blindspot {
+    has element_name: str = "",
+        kind: str = "",
+        mechanism: str = "",
+        endurance_after: float = 0.0,
+        strands_tier1: bool = False,
+        struck_by_red: bool = False,
+        self_inflicted: bool = False;
+}
+
+
+"""How much of the attack surface the campaign actually exercised."""
+obj Coverage {
+    has elements_total: int = 0,
+        elements_struck: int = 0,
+        rounds_run: int = 0,
+        oracle_worst: float = 0.0,
+        red_worst_element: str = "",
+        blindspots: list = [],
+        exercised: list = [],
+        summary: str = "";
+}
+
+
+"""Kind label for an element, matching the advisor's vocabulary."""
+def kind_label(n: GridNode) -> str {
+    if isinstance(n, Substation) { return "substation"; }
+    if isinstance(n, Generator) { return "generator"; }
+    if isinstance(n, Battery) { return "battery / UPS"; }
+    if isinstance(n, Facility) { return "facility"; }
+    return "switchgear";
+}
+
+
+"""Blindspot ordering: tier-1 stranders first, then worst endurance, then name."""
+def blindspot_key(b: Blindspot) -> tuple[int, float, str] {
+    return (0 if b.strands_tier1 else 1, b.endurance_after, b.element_name);
+}
+
+
+"""Every element name a landed RED strike has ever hit."""
+def struck_names -> list[str] {
+    out: list[str] = [];
+    run = active_run();
+    if run is None { return out; }
+    for r in [(run as Run) ->:HasRound:->] {
+        for e in [r ->:Struck:->] {
+            nm = (e as Event).target;
+            if nm not in out { out.append(nm); }
+        }
+    }
+    return out;
+}
+
+
+"""Which parts of the attack surface the campaign never touched.
+
+The advisor ranks what RED actually struck. That is the right input for "what
+did we learn" and the wrong input for "what did we miss": a campaign can only
+implicate elements the adversary chose to hit, and RED chooses from a redacted
+view. ORACLE evaluates every plausible single strike, so the difference between
+the two sets is the exercise's blind spot.
+
+A blind spot that strands life-critical load on its own is the most important
+line in any hardening plan, and by construction it is the line a red-team
+transcript can never contain.
+
+Only elements whose best single strike actually does damage are reported --
+listing every untouched element would bury the finding in noise.
+"""
+def coverage(beam: int) -> Coverage {
+    recompute_islands();
+    baseline = site_endurance(survey());
+    target = site_target_hours();
+    already = struck_names();
+
+    run = active_run();
+    rounds = 0;
+    if run is not None { rounds = len([(run as Run) ->:HasRound:->]); }
+
+    cov = Coverage(
+        elements_total=len(all_elements()),
+        elements_struck=len(already),
+        rounds_run=rounds
+    );
+
+    # Worst single strike available per element, evaluated the same way BLUE
+    # would experience it.
+    worst_by_element: dict[str, Blindspot] = {};
+    for c in candidate_strikes() {
+        res = evaluate([c]);
+        held = worst_by_element.get(c.target);
+        if held is None or res.endurance_after < (held as Blindspot).endurance_after {
+            target_node = element_named(c.target);
+            kind = "unknown";
+            if target_node is not None { kind = kind_label(target_node as GridNode); }
+            # Is the struck element itself a tier-1 load? Then any stranding it
+            # causes is trivially itself.
+            own_tier1 = False;
+            if target_node is not None and isinstance(target_node, Facility) {
+                own_tier1 = (target_node as Facility).tier == 1;
+            }
+            worst_by_element[c.target] = Blindspot(
+                element_name=c.target, kind=kind, mechanism=c.mechanism,
+                endurance_after=res.endurance_after,
+                strands_tier1=res.tier1_stranded,
+                struck_by_red=(c.target in already),
+                self_inflicted=own_tier1
+            );
+        }
+    }
+
+    blind: list[Blindspot] = [];
+    seen: list[Blindspot] = [];
+    for name in worst_by_element.keys() {
+        b = worst_by_element[name];
+        # Only report elements where a single strike actually costs something.
+        hurts = b.strands_tier1 or b.endurance_after < target;
+        if not hurts { continue; }
+        # Destroying a tier-1 facility strands tier-1 load by definition. That is
+        # a tautology, not a finding, and listing it buries the real result. The
+        # interesting case is infrastructure whose loss strands critical care it
+        # does not itself contain.
+        if b.self_inflicted { continue; }
+        if b.struck_by_red { seen.append(b); } else { blind.append(b); }
+        if b.endurance_after < cov.oracle_worst or cov.oracle_worst == 0.0 {
+            if cov.oracle_worst == 0.0 or b.endurance_after < cov.oracle_worst {
+                cov.oracle_worst = b.endurance_after;
+                cov.red_worst_element = b.element_name;
+            }
+        }
+    }
+
+    cov.blindspots = sorted(blind, key=blindspot_key);
+    cov.exercised = sorted(seen, key=blindspot_key);
+
+    killers = [b for b in cov.blindspots if b.strands_tier1];
+    if rounds == 0 {
+        cov.summary = (
+            f"No RED campaign has run yet. {len(cov.blindspots)} elements can be "
+            f"taken under the {target:.0f} h requirement by a single strike."
+        );
+    } elif len(killers) > 0 {
+        k = killers[0];
+        cov.summary = (
+            f"{rounds} scenario(s) exercised {cov.elements_struck} of "
+            f"{cov.elements_total} elements. {len(killers)} element(s) the campaign "
+            f"never touched strand life-critical load on a single strike -- worst is "
+            f"{k.mechanism} on {k.element_name}. A red-team transcript cannot "
+            f"surface this, because RED never tried it."
+        );
+    } else {
+        cov.summary = (
+            f"{rounds} scenario(s) exercised {cov.elements_struck} of "
+            f"{cov.elements_total} elements. No untested element strands "
+            f"life-critical load on its own; {len(cov.blindspots)} can still take "
+            f"the site under its {target:.0f} h requirement."
+        );
+    }
+    return cov;
 }

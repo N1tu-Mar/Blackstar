@@ -30,7 +30,9 @@ opens a breaker. It reads a finished campaign and returns prose for a human.
 The invariant that no model touches the load-shedding decision is untouched.
 """
 
-import from jaclang.byllm.lib { Model }
+# byllm 0.6.19 exposes this as `byllm.lib`; the `jaclang.byllm.lib` path only
+# exists on older builds and dies here with a bare ModuleNotFoundError at import.
+import from byllm.lib { Model }
 import from grid.model {
     Run, Round, Event, LessonNode, GridNode, Facility, Substation, Generator,
     Battery, Vulnerability, HardeningPlan, Lesson,

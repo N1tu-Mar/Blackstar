@@ -499,11 +499,11 @@ jac start --dev main.jac</pre>
             API is on 8001.
           </p>
           <p style="font-size:13px; color:var(--ink-3)">
-            No key? <code>BLACKSTART_MODEL=gemini/gemini-2.0-flash</code> or
-            <code>=mockllm</code>. The deterministic half —
-            <code>scripts/oracle.jac</code>, <code>report.jac</code>,
-            <code>coverage.jac</code>, <code>blackstart.jac</code> — needs no key
-            at all.
+            No Anthropic key? <code>BLACKSTART_MODEL</code> routes to another
+            provider. And the deterministic half runs with no model and no network
+            at all — <code>scripts/oracle.jac</code>, <code>report.jac</code>,
+            <code>coverage.jac</code>, <code>criticality.jac</code>,
+            <code>blackstart.jac</code>.
           </p>
         </div>
       </div>

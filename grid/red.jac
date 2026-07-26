@@ -37,10 +37,18 @@ import from grid.model {
 # default_model resolves to None in jac 0.34.5, and every `by llm()` call then
 # dies with a bare "'NoneType' object has no attribute". Declaring the model
 # explicitly here is what actually binds it.
-# The model is env-selectable so a dead key, a rate limit or venue wifi cannot
-# end the demo. Default is unchanged. Override with BLACKSTART_MODEL, e.g.
+# The model is env-selectable, so a dead Anthropic key or a rate limit can be
+# routed around without editing code. Default is unchanged:
 #   BLACKSTART_MODEL=gemini/gemini-2.0-flash   (needs GOOGLE_API_KEY)
-#   BLACKSTART_MODEL=mockllm                   (offline, no network at all)
+#   BLACKSTART_MODEL=openai/gpt-4o             (needs OPENAI_API_KEY)
+#
+# NOT a substitute for a working key. `mockllm` does not work here: it requires
+# canned `config={"outputs": [...]}` matching each by-llm return schema, and a
+# bare Model(model_name="mockllm") dies with a KeyError on 'outputs'. Verified.
+#
+# The genuinely key-free demo is the deterministic half, which is most of the
+# system: scripts/oracle.jac, report.jac, coverage.jac, criticality.jac and
+# blackstart.jac all run with no model and no network.
 glob llm: Model = Model(model_name=os.environ.get("BLACKSTART_MODEL", "claude-sonnet-5"));
 import from grid.islands {
     recompute_islands, survey, site_endurance, dark_facilities, tier1_stranded,

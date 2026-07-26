@@ -44,10 +44,18 @@ import from grid.prov { active_run, all_lessons }
 
 # Same reason as grid/red.jac: the ambient model from jac.toml resolves to None
 # and every call dies without a stack. Declare it explicitly.
-# The model is env-selectable so a dead key, a rate limit or venue wifi cannot
-# end the demo. Default is unchanged. Override with BLACKSTART_MODEL, e.g.
+# The model is env-selectable, so a dead Anthropic key or a rate limit can be
+# routed around without editing code. Default is unchanged:
 #   BLACKSTART_MODEL=gemini/gemini-2.0-flash   (needs GOOGLE_API_KEY)
-#   BLACKSTART_MODEL=mockllm                   (offline, no network at all)
+#   BLACKSTART_MODEL=openai/gpt-4o             (needs OPENAI_API_KEY)
+#
+# NOT a substitute for a working key. `mockllm` does not work here: it requires
+# canned `config={"outputs": [...]}` matching each by-llm return schema, and a
+# bare Model(model_name="mockllm") dies with a KeyError on 'outputs'. Verified.
+#
+# The genuinely key-free demo is the deterministic half, which is most of the
+# system: scripts/oracle.jac, report.jac, coverage.jac, criticality.jac and
+# blackstart.jac all run with no model and no network.
 glob llm: Model = Model(model_name=os.environ.get("BLACKSTART_MODEL", "claude-sonnet-5"));
 
 # How many vulnerabilities to carry into the recommendation. Beyond about four

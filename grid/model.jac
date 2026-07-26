@@ -76,7 +76,12 @@ node Round {
         # Kept on the round so calibration survives a restart like everything
         # else here - it is graph state, not a UI field.
         predicted_endurance_hours: float = 0.0,
-        actual_endurance_hours: float = 0.0;
+        actual_endurance_hours: float = 0.0,
+        # What the site was holding when the round opened, and whether critical
+        # care ended up stranded. The advisor ranks vulnerabilities off these,
+        # so they live on the round rather than being recomputed from ticks.
+        opening_endurance_hours: float = 0.0,
+        tier1_stranded: bool = False;
 }
 
 node Tick {
@@ -139,6 +144,12 @@ edge HasRound: Run --> Round {}
 # for RED, whose moves had no recorded cause. This closes that gap on the
 # adversary side.
 edge Informed: LessonNode --> Round {}
+
+# Which elements a round actually hit. The strikes were already Events on the
+# tick; this joins them back to the round that ordered them, so the advisor can
+# ask "across every scenario, what kept getting hit when things went worst?"
+# without re-deriving rounds from tick numbers.
+edge Struck: Round --> Event {}
 edge Learned: Round --> LessonNode {}
 edge HasTick: Run --> Tick {}
 edge HasEvent: Round --> Event {}
@@ -281,6 +292,39 @@ obj Lesson {
         observed: str,
         revision: str,
         confidence: float = 0.5;
+}
+
+# ------------------------------------------------- the defensive synthesis
+
+obj Vulnerability {
+    """One element, scored across every scenario RED has run.
+
+    `times_struck` is co-occurrence, NOT causation. All strikes in a round land
+    on one tick, so the graph cannot say which of them did the damage - only
+    that this element was hit in a round that ended this badly. The wording
+    everywhere downstream is "implicated in", never "caused", because the
+    arithmetic does not support the stronger claim.
+    """
+
+    has element_name: str = "",
+        kind: str = "",
+        times_struck: int = 0,
+        scenarios_total: int = 0,
+        worst_endurance_after: float = 0.0,
+        tier1_rounds: int = 0,
+        mechanisms: list[str] = [];
+}
+
+obj HardeningPlan {
+    has site: str = "",
+        rounds_analyzed: int = 0,
+        assessment: str = "",
+        single_point_of_failure: str = "",
+        vulnerabilities: list[Vulnerability] = [],
+        measures: list[str] = [],
+        rationales: list[str] = [],
+        expected_gains: list[str] = [],
+        authored_by: str = "";
 }
 
 # One full LOOK -> PLAN -> RUN -> REFLECT round, as returned to the UI.

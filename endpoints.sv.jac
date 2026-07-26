@@ -31,6 +31,7 @@ import from grid.prov {
 }
 import from grid.report { build_report, render_markdown, flatten_lines, ComplianceReport }
 import from grid.oracle { worst_chain, coverage, coverage_lines, OracleResult, Coverage, Blindspot }
+import from grid.restore { black_start, dry_run_restore, RestorePlan }
 
 
 """Ensure a campus exists, building one on first call."""
@@ -445,5 +446,34 @@ walker:pub GetCoverageLines {
         if b < 1 { b = 1; }
         if b > 12 { b = 12; }
         for l in coverage_lines(coverage(b)) { report l; }
+    }
+}
+
+
+walker:pub RunBlackStart {
+    """Bring the campus back: close ties, then pick load up lowest tier first.
+
+    The recovery half of the arc. Deterministic, and it refuses any step that
+    would trip a set or push endurance back under the requirement.
+    """
+    has reports: list[ExplainLine] = [];
+
+    can go with Root entry {
+        run = ensure_run();
+        plan = black_start();
+        run.tick += 1;
+        tick = write_tick(run, run.tick, plan.endurance_after, 0, 0.0);
+        report ExplainLine(ref="", text=plan.summary);
+        for s in plan.steps {
+            record_event(tick, s.action, s.target, s.reason, None);
+            report ExplainLine(
+                ref=f"s{s.order}",
+                text=f"{s.action} {s.target} -> {s.endurance_after:.1f} h"
+            );
+        }
+        for d in plan.deferred {
+            report ExplainLine(ref=d.limit[:5], text=f"held out: {d.target} - {d.reason}");
+        }
+        recompute_islands();
     }
 }

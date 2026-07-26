@@ -117,15 +117,16 @@ Say these plainly if a judge asks. They are the honest boundary of the model.
 2. **Electrical ratings are estimates.** Generator kW, fuel gallons, per-facility
    kW, battery kWh. No public document gives NMCP's installed chiller tonnage,
    boiler capacity, generator MW, or switchgear ratings. We looked.
-3. **Elevations are estimates,** not sampled from a DEM. This matters because
-   RED's flood plausibility gate compares element elevation against a surge stage,
-   so that gate is currently checking a modeled number. Wiring it to USGS 3DEP and
-   a NOAA tide datum is the highest-value data upgrade left.
+3. **Elevations are estimates,** not sampled from a DEM. The surge stage they are
+   compared against is now real (see Live conditions below), but the elevations
+   themselves are not, so the flood gate is half-grounded. Sampling USGS 3DEP per
+   element is the highest-value data upgrade left.
 4. **Tier assignment is a judgement, deliberately.** Deciding the ICU is tier 1 and
    the galley is tier 3 is a call a facility's own engineers make. The tool
    computes the consequences of that list; it does not author it.
-5. **No live feed.** Endurance is computed from graph state, not from a real
-   telemetry or weather stream. Nothing here reads a sensor.
+5. **No electrical telemetry.** River stage and weather are real (below), but
+   endurance is computed from graph state, not from a SCADA feed. Nothing here
+   reads a breaker or a fuel level off real hardware.
 
 ## What we could not verify
 

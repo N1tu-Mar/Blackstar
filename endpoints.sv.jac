@@ -26,7 +26,7 @@ import from grid.campus { site_target_hours }
 import from grid.red { build_dashboard, redact_for_red, plan, reflect, execute, measure, resolve_target }
 import from grid.prov {
     active_run, write_tick, record_event, record_finding, record_decision,
-    open_round, record_lesson, all_lessons, explain
+    open_round, record_lesson, all_lessons, explain, link_lessons, why_round
 }
 
 
@@ -279,6 +279,10 @@ walker:pub RunRound {
 
         rnd = open_round(run, run.round_index, scenario.name, scenario.hazard,
                          scenario.expected_effect);
+        rnd.predicted_endurance_hours = scenario.predicted_endurance_hours;
+        # Record which lessons were actually in context. With memory off none
+        # were, and no edge is written - so the A/B is visible on the graph.
+        if run.memory_enabled { _ = link_lessons(rnd); }
 
         # RUN - resolve, gate, apply, then let BLUE respond.
         run.tick += 1;
@@ -294,7 +298,9 @@ walker:pub RunRound {
         tick.site_endurance_hours = site_endurance(after_islands);
         tick.island_count = len(after_islands);
 
-        outcome = measure(before, actions, breached, unresolved, rejected);
+        outcome = measure(before, actions, breached, unresolved, rejected,
+                          scenario.predicted_endurance_hours);
+        rnd.actual_endurance_hours = outcome.endurance_after;
 
         # REFLECT - LLM call 2. This is what makes it a loop, not a lookup.
         lesson = reflect(scenario, outcome);
@@ -305,6 +311,7 @@ walker:pub RunRound {
             scenario_name=scenario.name,
             hazard=scenario.hazard,
             expectation=scenario.expected_effect,
+            predicted_endurance_hours=scenario.predicted_endurance_hours,
             strikes=scenario.strikes,
             shed_actions=actions,
             breach=breached,

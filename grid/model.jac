@@ -71,7 +71,12 @@ node Round {
     has index: int,
         scenario_name: str = "",
         hazard: str = "",
-        expectation: str = "";
+        expectation: str = "",
+        # RED's committed forecast, and what the arithmetic actually returned.
+        # Kept on the round so calibration survives a restart like everything
+        # else here - it is graph state, not a UI field.
+        predicted_endurance_hours: float = 0.0,
+        actual_endurance_hours: float = 0.0;
 }
 
 node Tick {
@@ -124,6 +129,16 @@ edge DerivedFrom: Finding --> Tick {}
 edge Caused: Event --> Event {}
 edge Affected: Decision --> Facility {}
 edge HasRound: Run --> Round {}
+
+# Memory, made walkable. Written when a lesson was in RED's context as it
+# planned a round, so "why did RED open with that?" is a graph walk rather
+# than a claim in prose.
+#
+# Invariant 5 says every decision is a node with edges to its evidence. That
+# held for BLUE - a Decision points at the Finding that justified it - but not
+# for RED, whose moves had no recorded cause. This closes that gap on the
+# adversary side.
+edge Informed: LessonNode --> Round {}
 edge Learned: Round --> LessonNode {}
 edge HasTick: Run --> Tick {}
 edge HasEvent: Round --> Event {}
@@ -237,14 +252,16 @@ obj Strike {
     has target_name: str,
         mechanism: str,
         delay_ticks: int = 1,
-        rationale: str = "";
+        rationale: str = "",
+        immediate_damage: str = "severe";
 }
 
 obj Scenario {
     has name: str,
         hazard: str,
         strikes: list[Strike] = [],
-        expected_effect: str = "";
+        expected_effect: str = "",
+        predicted_endurance_hours: float = 0.0;
 }
 
 obj Outcome {
@@ -255,7 +272,8 @@ obj Outcome {
         tier1_stranded: bool = False,
         shed_actions: list[str] = [],
         unresolved_targets: list[str] = [],
-        rejected_strikes: list[str] = [];
+        rejected_strikes: list[str] = [],
+        prediction_error_hours: float = -1.0;
 }
 
 obj Lesson {
@@ -275,6 +293,7 @@ obj RoundResult {
         shed_actions: list[str] = [],
         breach: bool = False,
         memory_enabled: bool = True,
+        predicted_endurance_hours: float = 0.0,
         outcome: Outcome = Outcome(),
         lesson: Lesson = Lesson(hypothesis="", observed="", revision=""),
         dashboard: Dashboard = Dashboard(site="", tick=0, round_index=0);
@@ -290,10 +309,14 @@ sem Strike.target_name = "The element to hit, named exactly as it appears on the
 sem Strike.mechanism = "Exactly one of: flood, wind, fuel_interdiction, cyber_switching, equipment_failure, fire.";
 sem Strike.delay_ticks = "Ticks after the previous strike that this one lands, 1 to 6.";
 sem Strike.rationale = "Why a real hazard would produce this, in one sentence.";
+sem Strike.immediate_damage = "How much this strike costs the facility BY ITSELF, ignoring what it enables later: 'none', 'partial' or 'severe'. 'none' is a legitimate and often superior answer - a strike that does nothing on its own but removes the redundancy a later strike depends on is exactly how real cascades work, and it is the move a search scoring each strike separately would never choose.";
 
 sem Scenario.name = "Short operational name for this failure chain.";
 sem Scenario.hazard = "The physical hazard driving the chain, for example 'Category 2 hurricane, storm surge up the Elizabeth River'.";
 sem Scenario.expected_effect = "What you expect this to do to the facility's endurance and to its critical care areas.";
+sem Scenario.predicted_endurance_hours = "Your numeric forecast, in hours, of the site endurance this chain will leave behind after the defensive controller has responded. Commit to a number before you see the result.";
+
+sem Outcome.prediction_error_hours = "Absolute gap in hours between the endurance RED forecast and what the arithmetic actually produced. -1 means no forecast was made.";
 
 sem Outcome.islands_formed = "How many separate energized islands the grid broke into.";
 sem Outcome.endurance_before = "Site endurance in hours before the scenario ran.";

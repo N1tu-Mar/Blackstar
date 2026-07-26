@@ -168,9 +168,11 @@ obj ScenarioDraft {
     has name: str,
         hazard: str,
         expected_effect: str,
+        predicted_endurance_hours: float,
         targets: list[str],
         mechanisms: list[str],
-        rationales: list[str];
+        rationales: list[str],
+        immediate_damages: list[str];
 }
 
 sem ScenarioDraft.name = "A short operational codename for this specific attack, two to four words, in the style of a named storm or exercise. For example 'Tidewater Surge' or 'Dark Harbor'. Do not restate the schema or use the word scenario.";
@@ -179,6 +181,8 @@ sem ScenarioDraft.expected_effect = "What you expect this to do to the facility'
 sem ScenarioDraft.targets = "The element names to strike, in the order they fail. Each must match a name visible on the dashboard exactly. Use no more than the number of strikes the dashboard says you are allowed this round.";
 sem ScenarioDraft.mechanisms = "One mechanism per target, same order and same length as targets. Each is exactly one of: flood, wind, fuel_interdiction, cyber_switching, equipment_failure, fire.";
 sem ScenarioDraft.rationales = "One sentence per target, same order and same length as targets, saying why a real hazard would cause that failure at that point in the chain.";
+sem ScenarioDraft.immediate_damages = "One entry per target, same order and same length as targets. Each is exactly one of: none, partial, severe - how much that strike costs the facility BY ITSELF, ignoring what it enables later. Prefer a chain in which at least one strike is 'none': a strike that does no damage on its own but strips the redundancy a later strike depends on is how real cascades work, and it is precisely the move that a search scoring each strike in isolation can never find.";
+sem ScenarioDraft.predicted_endurance_hours = "Your numeric forecast, in hours, of the site endurance this chain leaves after the defensive controller responds. You cannot see the wiring, so this is a genuine prediction from an incomplete model - commit to it before you learn the answer.";
 
 """Write the next failure chain a real hazard would produce at this facility.
 
@@ -206,16 +210,22 @@ def plan(view: Dashboard, lessons: list[Lesson]) -> Scenario {
         label = d.hazard.split(",")[0].strip() if d.hazard else "Unnamed scenario";
     }
 
-    out = Scenario(name=label, hazard=d.hazard, expected_effect=d.expected_effect, strikes=[]);
+    out = Scenario(name=label, hazard=d.hazard, expected_effect=d.expected_effect,
+                   strikes=[], predicted_endurance_hours=d.predicted_endurance_hours);
     limit = len(d.targets);
     # The budget is enforced here, not merely requested in the prompt.
     if limit > view.strikes_allowed { limit = view.strikes_allowed; }
     for i in range(limit) {
         mech = d.mechanisms[i] if i < len(d.mechanisms) else "equipment_failure";
         why = d.rationales[i] if i < len(d.rationales) else "";
+        # Default to "severe" rather than "none" on a short array: an unlabelled
+        # strike must not be mistaken for a deliberate setup move, which is the
+        # one claim this field exists to support.
+        dmg = d.immediate_damages[i] if i < len(d.immediate_damages) else "severe";
+        if dmg not in ["none", "partial", "severe"] { dmg = "severe"; }
         out.strikes.append(Strike(
             target_name=d.targets[i], mechanism=mech,
-            delay_ticks=i + 1, rationale=why
+            delay_ticks=i + 1, rationale=why, immediate_damage=dmg
         ));
     }
     return out;
@@ -436,18 +446,26 @@ def execute(scenario: Scenario, tick: Tick) -> tuple[list[str], list[str]] {
 
 """Summarize what the scenario actually did, for REFLECT to read."""
 def measure(before: float, shed_actions: list[str], breached: bool,
-            unresolved: list[str], rejected: list[str]) -> Outcome {
+            unresolved: list[str], rejected: list[str],
+            predicted: float) -> Outcome {
     recompute_islands();
     islands = survey();
     dark = [f.name for f in dark_facilities()];
+    after = site_endurance(islands);
+    # A near miss is stronger evidence than a hit. RED forecasts from a view
+    # with the wiring removed, so landing close means it holds a working model
+    # of a facility it cannot see - which a lookup against an oracle would not
+    # demonstrate. -1 marks "no forecast offered" rather than a perfect one.
+    err = abs(predicted - after) if predicted > 0.0 else -1.0;
     return Outcome(
         islands_formed=len(islands),
         endurance_before=before,
-        endurance_after=site_endurance(islands),
+        endurance_after=after,
         facilities_dark=dark,
         tier1_stranded=breached or tier1_stranded(islands),
         shed_actions=shed_actions,
         unresolved_targets=unresolved,
-        rejected_strikes=rejected
+        rejected_strikes=rejected,
+        prediction_error_hours=err
     );
 }

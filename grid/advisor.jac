@@ -265,7 +265,11 @@ def hardening_plan -> HardeningPlan {
             measures=d.measures,
             rationales=d.rationales,
             expected_gains=d.expected_gains,
-            authored_by="ADVISOR (claude-sonnet-5)"
+            # Report the model that actually answered, not a hardcoded name.
+            # This line ends up on a compliance artifact, so it claiming
+            # claude-sonnet-5 while running on something else is exactly the
+            # kind of small untruth an auditor is entitled to be annoyed by.
+            authored_by=f"ADVISOR ({os.environ.get('BLACKSTART_MODEL', 'claude-sonnet-5')})"
         );
     } except Exception {
         plan = scripted_plan(site, top, rounds);

@@ -13,11 +13,11 @@ import from grid.model {
     Run, Tick, Event, Finding, Decision,
     Dashboard, MapView, MapNode, MapEdge, MapPaths, Explanation, ExplainLine,
     Scenario, Strike, Outcome, Lesson, RoundResult, IslandView, FacilityView,
-    SiteSummary, HardeningPlan, Vulnerability
+    SiteSummary, HardeningPlan, Vulnerability, EscalationAdvice
 }
 import from grid.advisor { hardening_plan }
 import from grid.restore { restore_pass, stranded_critical, escalate }
-import from grid.campus { build_campus, reset_campus, list_sites, set_active_site }
+import from grid.campus { build_campus, reset_campus, list_sites, set_active_site, site_name }
 import from grid.basemap { load_basemap, clear_basemap_cache, bx, by }
 import from grid.islands {
     recompute_islands, survey, site_endurance, dark_facilities, tier1_stranded,
@@ -174,6 +174,48 @@ walker:pub GetHardeningPlan {
     can go with Root entry {
         _ = ensure_run();
         report hardening_plan();
+    }
+}
+
+
+walker:pub GetEscalation {
+    """What now, when no switching operation can restore a load?
+
+    Deliberately a separate call rather than part of RunBlue. Restoration is
+    control-path and must stay model-free; this runs after it, on demand, once
+    the deterministic search has provably exhausted every closable tie. Keeping
+    it out of the control path is what preserves the invariant.
+    """
+    has reports: list[EscalationAdvice] = [];
+
+    can go with Root entry {
+        _ = ensure_run();
+        recompute_islands();
+        stuck = [f.name for f in stranded_critical()];
+        if len(stuck) == 0 {
+            report EscalationAdvice(
+                assessment="No critical load is stranded. Nothing to escalate.",
+                authored_by="ADVISOR (nothing to escalate)"
+            );
+            disengage;
+        }
+        broken: list[str] = [];
+        for n in all_elements() {
+            if n.damaged { broken.append(f"{n.name} ({n.kind})"); }
+        }
+        out = EscalationAdvice(
+            assessment="No model was reachable, so no options were generated.",
+            authored_by="ESCALATION (scripted fallback)"
+        );
+        try {
+            d = escalate(site_name(), stuck, broken, recent_event_text(12));
+            out = EscalationAdvice(
+                assessment=d.assessment, options=d.options,
+                rationales=d.rationales, first_action=d.first_action,
+                authored_by="ESCALATION (live model, with graph tools)"
+            );
+        } except Exception {}
+        report out;
     }
 }
 

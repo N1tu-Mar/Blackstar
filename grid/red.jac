@@ -26,7 +26,7 @@ RED sees `Dashboard`. Conductors are not in it.
 # byllm 0.6.19 exposes this as `byllm.lib`; the `jaclang.byllm.lib` path only
 # exists on older builds and dies here with a bare ModuleNotFoundError at import.
 import os;
-import from byllm.lib { Model }
+import from jaclang.byllm.lib { Model }
 import from grid.model {
     GridNode, Substation, Generator, Battery, Facility, Conductor,
     Dashboard, FacilityView, IslandView, Strike, Scenario, Outcome, Lesson, Event, Tick,

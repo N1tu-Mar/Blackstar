@@ -31,7 +31,13 @@ import from grid.prov {
 }
 import from grid.report { build_report, render_markdown, flatten_lines, ComplianceReport }
 import from grid.oracle { worst_chain, coverage, coverage_lines, OracleResult, Coverage, Blindspot }
-import from grid.restore { black_start, dry_run_restore, RestorePlan }
+# RunBlackStart does not get a POST route registered on this jac build and
+# answers 405; GenerateReport and RunCoverage behave the same way while
+# GetReportLines, GetCoverageLines and RunOracle register fine. The cause is not
+# the nested return shape (RunOracle returns a nested obj and works) and not this
+# import (dropping RestorePlan changed nothing). Unresolved. All three work
+# in-process, which is how scripts/blackstart.jac and scripts/report.jac use them.
+import from grid.restore { black_start }
 
 
 """Ensure a campus exists, building one on first call."""

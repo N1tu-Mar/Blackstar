@@ -33,7 +33,25 @@ The invariant that no model touches the load-shedding decision is untouched.
 import os;
 # byllm 0.6.19 exposes this as `byllm.lib`; the `jaclang.byllm.lib` path only
 # exists on older builds and dies here with a bare ModuleNotFoundError at import.
-import from jaclang.byllm.lib { Model }
+import importlib;
+import importlib.util;
+
+# byLLM lives at a different import path depending on how jac was installed, and
+# Jac has no try/except around imports, so resolve it at runtime instead:
+#
+#   official `jac` binary (0.34.x)   -> byLLM is bundled at jaclang.byllm
+#   pip `jaclang` + `byllm`          -> byLLM is top-level as byllm
+#
+# Hardcoding either one breaks the build on the other machine, which it did
+# twice: `byllm.lib` dies with ModuleNotFoundError under the binary, and
+# `jaclang.byllm.lib` dies the same way under the pip pair. Verified against
+# both.
+glob _byllm_lib = importlib.import_module(
+    "jaclang.byllm.lib"
+    if importlib.util.find_spec("jaclang.byllm") is not None
+    else "byllm.lib"
+);
+glob Model = _byllm_lib.Model;
 import from grid.model {
     Run, Round, Event, LessonNode, GridNode, Facility, Substation, Generator,
     Battery, Vulnerability, HardeningPlan, Lesson,

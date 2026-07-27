@@ -41,8 +41,10 @@ clicking. Do not rush the numbers — they are the whole argument.
 > sections, and endurance drops to **76.1 hours** against a 96-hour requirement.
 > Nothing has been shed yet and the hospital is already non-compliant.
 >
-> We never wrote a splitting algorithm. In Jac a walker can't cross a dead cable,
-> so the islanding just happens."
+> We never wrote a splitting algorithm. **The entire islanding logic is two
+> lines** — a walker told to visit only conductors that are passable. A dead cable
+> isn't an edge it declines to take, it's an edge it can't see. There is no
+> connected-components routine anywhere in this repo."
 
 **Click: Protect critical care**
 
@@ -70,8 +72,8 @@ clicking. Do not rush the numbers — they are the whole argument.
 > dataset.
 >
 > Two model calls a round: plan the attack, then write down what it learned. Both
-> are functions with a signature and no body — there is no prompt anywhere in
-> this repo.
+> are functions with **a signature, a `sem` annotation, and no body**. Jac builds
+> the prompt from the types — there is no prompt string anywhere in this repo.
 >
 > And it's grounded. The flood check runs against the river gauge a mile and a
 > half from the hospital, read this morning. Last run it **refused** the model's
@@ -114,6 +116,41 @@ critical care on a *single* hit. None of them were ever attacked."
 
 **Click: File the legal report** — "And this is the artifact. The §2925 filing,
 generated from the decision record, every line citing an archive node."
+
+---
+
+## The Jac answer (30s, use it for Best Use of Jac)
+
+> "The grid isn't stored in a database and analysed — **the graph is the program.**
+> 12 node types, 16 edge types, 19 walkers.
+>
+> Three things fall out of that, and none of them are code we wrote.
+>
+> **Islanding is emergent.** Two `visit` statements filtered to passable
+> conductors. Cut a cable and the campus fractures because traversal changed. Zero
+> connected-components algorithms in the repo.
+>
+> **There's no database.** `root ++>` is the whole persistence story. The audit
+> trail *is* the graph." — *then do this live:* **kill the server, restart it, hit
+> refresh.** "Same damage, same three islands, same 76.1 hours, both cut events
+> still on the record. No Postgres, no ORM, no migrations — `jac.toml` doesn't
+> mention a database.
+>
+> **The API is the walkers.** 18 `walker:pub` declarations and that's the entire
+> backend — no FastAPI, no routes file. And the frontend is `.cl.jac` compiling to
+> React, so this is one language end to end. 87% of the codebase is Jac."
+
+Concrete, checkable:
+
+| Jac feature | In this repo |
+|---|---|
+| `node` / `edge` / `walker` archetypes | 12 / 16 / 19 |
+| Typed edges | `edge Conductor: GridNode --> GridNode` |
+| Emergent islanding | **2** `visit` statements, **0** connected-components routines |
+| `by llm()` bodyless functions | 3, with **47** `sem` annotations |
+| Persistence | `root ++>`, survives `kill -9` + restart, **0** database references |
+| Public API | 18 `walker:pub`, no web framework |
+| Full stack in one language | 4 `.cl.jac` client files compiling to React |
 
 ---
 
